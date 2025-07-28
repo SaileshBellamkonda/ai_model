@@ -1,0 +1,11 @@
+{
+  "max_memory_mb": 2048,
+  "use_f32_precision": true,
+  "aggressive_memory_optimization": true,
+  "cpu_threads": 4,
+  "enable_caching": true,
+  "hidden_size": 512,
+  "num_layers": 6,
+  "vocab_size": 32000,
+  "max_sequence_length": 2048
+}
