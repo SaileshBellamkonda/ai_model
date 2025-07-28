@@ -1,0 +1,15 @@
+{
+  "ModelPath": "demo-model",
+  "MaxSequenceLength": 512,
+  "Temperature": 0.7,
+  "TopK": 50,
+  "TopP": 0.9,
+  "MaxTokens": 150,
+  "EnableCpuOptimization": true,
+  "CpuThreads": -1,
+  "Memory": {
+    "MemoryLimitMB": 2048,
+    "EnableMemoryMapping": true,
+    "EnableGradientCheckpointing": true
+  }
+}
