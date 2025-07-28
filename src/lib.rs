@@ -18,7 +18,7 @@ pub mod tokenizer;
 pub mod inference;
 
 pub use core::{AIModel, ModelConfig};
-pub use models::neural_network::NeuralNetwork;
+pub use models::{GoldbullModel, GoldbullEmbedding, GoldbullEmbeddingConfig};
 pub use tasks::{TaskType, TaskResult};
 pub use tools::{FunctionCall, ToolRegistry};
 

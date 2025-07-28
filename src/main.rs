@@ -1,16 +1,16 @@
-use ai_model::{
+use goldbull::{
     AIModel, ModelConfig, TaskType,
     tools::{HttpRequestTool, FileOperationsTool, CalculatorTool},
     utils::{setup_logging, get_system_info, load_config_from_env},
-    tokenizer::{BpeTokenizer, BpeTokenizerConfig, BigcodeDatasetConfig},
+    tokenizer::{TiktokenBpeTokenizer, TiktokenBpeConfig, BigcodeDatasetConfig},
     inference::{InferenceEngineFactory, InferenceConfig, InferenceEngineType},
 };
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
 
 #[derive(Parser)]
-#[command(name = "ai_model")]
-#[command(about = "A lightweight, high-accuracy machine learning model")]
+#[command(name = "goldbull")]
+#[command(about = "Goldbull: Enterprise-grade ML model with BPE tokenizer and NLP capabilities")]
 #[command(version = "0.1.0")]
 struct Cli {
     #[command(subcommand)]
@@ -144,6 +144,45 @@ enum Commands {
         #[arg(short, long)]
         format: String,
     },
+
+    /// Generate text embeddings
+    GetEmbeddings {
+        /// Texts to embed (separated by newlines)
+        #[arg(short, long)]
+        texts: Vec<String>,
+        /// Output file path (optional)
+        #[arg(short, long)]
+        output: Option<String>,
+    },
+
+    /// Compute text similarity
+    TextSimilarity {
+        /// First text
+        text1: String,
+        /// Second text  
+        text2: String,
+    },
+
+    /// Analyze text for NLP (sentiment, entities, topics)
+    AnalyzeNlp {
+        /// Text to analyze
+        text: String,
+    },
+
+    /// Extract named entities
+    ExtractEntities {
+        /// Text to process
+        text: String,
+    },
+
+    /// Classify text into categories
+    ClassifyText {
+        /// Text to classify
+        text: String,
+        /// Possible categories (comma-separated)
+        #[arg(long, value_delimiter = ',')]
+        categories: Vec<String>,
+    },
 }
 
 #[tokio::main]
@@ -242,6 +281,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         Commands::ConvertModel { input, output, format } => {
             convert_model_format(&input, &output, &format).await?;
+        },
+
+        Commands::GetEmbeddings { texts, output } => {
+            get_text_embeddings(&model, &texts, output.as_deref()).await?;
+        },
+
+        Commands::TextSimilarity { text1, text2 } => {
+            compute_text_similarity(&model, &text1, &text2).await?;
+        },
+
+        Commands::AnalyzeNlp { text } => {
+            analyze_text_nlp(&model, &text).await?;
+        },
+
+        Commands::ExtractEntities { text } => {
+            extract_named_entities(&model, &text).await?;
+        },
+
+        Commands::ClassifyText { text, categories } => {
+            classify_text(&model, &text, &categories).await?;
         },
     }
     
@@ -494,16 +553,22 @@ async fn load_config_from_file(path: &str) -> Result<ModelConfig, Box<dyn std::e
     Ok(config)
 }
 
-/// Train BPE tokenizer on bigcode dataset
+/// Train tiktoken-style BPE tokenizer on bigcode dataset
 async fn train_bpe_tokenizer(output_path: &str, languages: &[String], max_samples: usize) -> Result<(), Box<dyn std::error::Error>> {
-    println!("Training BPE tokenizer...");
+    println!("Training tiktoken-style BPE tokenizer...");
     println!("Languages: {:?}", languages);
     println!("Max samples: {}", max_samples);
     println!("Output path: {}", output_path);
     
     // Create tokenizer config
-    let config = BpeTokenizerConfig::default();
-    let mut tokenizer = BpeTokenizer::new(config)?;
+    let config = TiktokenBpeConfig::default();
+    let mut tokenizer = TiktokenBpeTokenizer::new(config)?;
+    
+    // Load BPEmb vocabulary first
+    println!("Loading BPEmb vocabulary...");
+    if let Err(e) = tokenizer.load_bpemb_vocabulary().await {
+        println!("Warning: Failed to load BPEmb vocabulary: {}. Using base tokenizer.", e);
+    }
     
     // Create dataset config
     let dataset_config = BigcodeDatasetConfig {
@@ -522,7 +587,7 @@ async fn train_bpe_tokenizer(output_path: &str, languages: &[String], max_sample
     }
     tokenizer.save(output_path)?;
     
-    println!("BPE tokenizer training completed successfully!");
+    println!("Tiktoken-style BPE tokenizer training completed successfully!");
     println!("Tokenizer saved to: {}", output_path);
     
     Ok(())
@@ -665,6 +730,105 @@ async fn convert_model_format(input_path: &str, output_path: &str, target_format
     
     println!("Model conversion completed successfully!");
     println!("Converted model saved to: {}", output_path);
+    
+    Ok(())
+}
+
+/// Generate text embeddings using Goldbull embedding model
+async fn get_text_embeddings(model: &AIModel, texts: &[String], output_path: Option<&str>) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Generating embeddings for {} texts...", texts.len());
+    
+    let embeddings = model.get_embeddings(texts).await?;
+    
+    println!("Generated {}-dimensional embeddings:", embeddings.first().map(|e| e.len()).unwrap_or(0));
+    
+    for (i, (text, embedding)) in texts.iter().zip(embeddings.iter()).enumerate() {
+        println!("Text {}: \"{}\"", i + 1, text);
+        println!("Embedding: [{:.6}, {:.6}, ..., {:.6}] (showing first 2 and last 1 dimensions)", 
+                 embedding.get(0).unwrap_or(&0.0),
+                 embedding.get(1).unwrap_or(&0.0),
+                 embedding.last().unwrap_or(&0.0));
+        println!();
+    }
+    
+    // Save to file if requested
+    if let Some(path) = output_path {
+        let output_data = serde_json::json!({
+            "embeddings": embeddings,
+            "texts": texts,
+            "model": "goldbull-embedding",
+            "dimensions": embeddings.first().map(|e| e.len()).unwrap_or(0),
+            "created_at": chrono::Utc::now().to_rfc3339()
+        });
+        
+        tokio::fs::write(path, serde_json::to_string_pretty(&output_data)?).await?;
+        println!("Embeddings saved to: {}", path);
+    }
+    
+    Ok(())
+}
+
+/// Compute text similarity using embeddings
+async fn compute_text_similarity(model: &AIModel, text1: &str, text2: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Computing similarity between:");
+    println!("Text 1: \"{}\"", text1);
+    println!("Text 2: \"{}\"", text2);
+    println!();
+    
+    let similarity = model.text_similarity(text1, text2).await?;
+    
+    println!("Similarity score: {:.4}", similarity);
+    println!();
+    
+    if similarity > 0.8 {
+        println!("🔥 Very similar texts");
+    } else if similarity > 0.6 {
+        println!("✨ Moderately similar texts");
+    } else if similarity > 0.3 {
+        println!("📝 Somewhat similar texts");
+    } else {
+        println!("❄️  Dissimilar texts");
+    }
+    
+    Ok(())
+}
+
+/// Analyze text using NLP capabilities
+async fn analyze_text_nlp(model: &AIModel, text: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Analyzing text: \"{}\"", text);
+    println!();
+    
+    let analysis = model.analyze_text_nlp(text).await?;
+    
+    println!("=== NLP Analysis ===");
+    println!("{}", analysis);
+    
+    Ok(())
+}
+
+/// Extract named entities from text
+async fn extract_named_entities(model: &AIModel, text: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Extracting entities from: \"{}\"", text);
+    println!();
+    
+    let entities = model.extract_entities(text).await?;
+    
+    println!("=== Named Entities ===");
+    println!("{}", entities);
+    
+    Ok(())
+}
+
+/// Classify text into categories
+async fn classify_text(model: &AIModel, text: &str, categories: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Classifying text: \"{}\"", text);
+    println!("Categories: {:?}", categories);
+    println!();
+    
+    let classification = model.classify_text(text, categories).await?;
+    
+    println!("=== Classification ===");
+    println!("{}", classification);
     
     Ok(())
 }

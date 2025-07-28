@@ -1,5 +1,6 @@
 use crate::{Result, PerformanceMetrics};
-use crate::models::neural_network::NeuralNetwork;
+use crate::models::{GoldbullModel, GoldbullEmbedding, GoldbullEmbeddingConfig};
+use crate::tokenizer::{TiktokenBpeTokenizer, TiktokenBpeConfig};
 use crate::tasks::{TaskType, TaskResult};
 use crate::tools::ToolRegistry;
 use crate::memory::MemoryManager;
@@ -42,16 +43,17 @@ impl Default for ModelConfig {
             enable_caching: true,
             hidden_size: 512, // Compact model size
             num_layers: 6, // Lightweight architecture
-            vocab_size: 32000,
+            vocab_size: 1000000, // BPEmb 1M vocabulary
             max_sequence_length: 2048,
         }
     }
 }
 
-/// Main AI model structure
+/// Main AI model structure (Goldbull)
 pub struct AIModel {
     config: ModelConfig,
-    neural_network: Arc<RwLock<NeuralNetwork>>,
+    goldbull_model: Arc<RwLock<GoldbullModel>>,
+    goldbull_embedding: Arc<RwLock<GoldbullEmbedding>>,
     tool_registry: Arc<RwLock<ToolRegistry>>,
     memory_manager: Arc<RwLock<MemoryManager>>,
     performance_metrics: Arc<RwLock<PerformanceMetrics>>,
@@ -65,9 +67,31 @@ impl AIModel {
             MemoryManager::new(config.max_memory_mb)
         ));
         
-        // Initialize neural network
-        let neural_network = Arc::new(RwLock::new(
-            NeuralNetwork::new(&config).await?
+        // Initialize tiktoken-style BPE tokenizer
+        let tokenizer_config = TiktokenBpeConfig::default();
+        let mut tokenizer = TiktokenBpeTokenizer::new(tokenizer_config)?;
+        
+        // Try to load BPEmb vocabulary
+        if let Err(e) = tokenizer.load_bpemb_vocabulary().await {
+            log::warn!("Failed to load BPEmb vocabulary: {}. Using base tokenizer.", e);
+        }
+        
+        // Create a second tokenizer for embedding model
+        let embedding_tokenizer_config = TiktokenBpeConfig::default();
+        let mut embedding_tokenizer = TiktokenBpeTokenizer::new(embedding_tokenizer_config)?;
+        if let Err(e) = embedding_tokenizer.load_bpemb_vocabulary().await {
+            log::warn!("Failed to load BPEmb vocabulary for embedding model: {}. Using base tokenizer.", e);
+        }
+        
+        // Initialize Goldbull main model
+        let goldbull_model = Arc::new(RwLock::new(
+            GoldbullModel::new(&config, tokenizer).await?
+        ));
+        
+        // Initialize Goldbull embedding model
+        let embedding_config = GoldbullEmbeddingConfig::default();
+        let goldbull_embedding = Arc::new(RwLock::new(
+            GoldbullEmbedding::new(embedding_config, embedding_tokenizer).await?
         ));
         
         // Initialize tool registry
@@ -85,9 +109,12 @@ impl AIModel {
             }
         ));
         
+        log::info!("Goldbull model initialized successfully");
+        
         Ok(Self {
             config,
-            neural_network,
+            goldbull_model,
+            goldbull_embedding,
             tool_registry,
             memory_manager,
             performance_metrics,
@@ -148,8 +175,8 @@ impl AIModel {
     
     /// Generate text based on input prompt
     async fn generate_text(&self, prompt: &str, max_tokens: usize, temperature: f32) -> Result<TaskResult> {
-        let nn = self.neural_network.read().await;
-        let generated_text = nn.generate_text(prompt, max_tokens, temperature).await?;
+        let model = self.goldbull_model.read().await;
+        let generated_text = model.generate_text(prompt, max_tokens, temperature).await?;
         
         Ok(TaskResult::TextGeneration {
             generated_text,
@@ -160,8 +187,8 @@ impl AIModel {
     
     /// Complete code based on context
     async fn complete_code(&self, partial_code: &str, language: &str, context_lines: usize) -> Result<TaskResult> {
-        let nn = self.neural_network.read().await;
-        let completion = nn.complete_code(partial_code, language, context_lines).await?;
+        let model = self.goldbull_model.read().await;
+        let completion = model.complete_code(partial_code, language, context_lines).await?;
         
         Ok(TaskResult::CodeCompletion {
             completion,
@@ -171,8 +198,8 @@ impl AIModel {
     
     /// Answer a question with optional context
     async fn answer_question(&self, question: &str, context: Option<&str>) -> Result<TaskResult> {
-        let nn = self.neural_network.read().await;
-        let answer = nn.answer_question(question, context).await?;
+        let model = self.goldbull_model.read().await;
+        let answer = model.answer_question(question, context).await?;
         
         Ok(TaskResult::QuestionAnswer {
             answer,
@@ -183,8 +210,8 @@ impl AIModel {
     
     /// Summarize text
     async fn summarize_text(&self, text: &str, max_length: usize, style: &str) -> Result<TaskResult> {
-        let nn = self.neural_network.read().await;
-        let summary = nn.summarize_text(text, max_length, style).await?;
+        let model = self.goldbull_model.read().await;
+        let summary = model.summarize_text(text, max_length, style).await?;
         
         Ok(TaskResult::Summarization {
             summary: summary.clone(),
@@ -194,8 +221,8 @@ impl AIModel {
     
     /// Analyze image (basic visual analysis)
     async fn analyze_image(&self, description: &str, image_data: &[u8]) -> Result<TaskResult> {
-        let nn = self.neural_network.read().await;
-        let analysis = nn.analyze_image(description, image_data).await?;
+        let model = self.goldbull_model.read().await;
+        let analysis = model.analyze_image(description, image_data).await?;
         
         Ok(TaskResult::VisualAnalysis {
             description: analysis,
@@ -225,6 +252,44 @@ impl AIModel {
     /// Get model configuration
     pub fn get_config(&self) -> &ModelConfig {
         &self.config
+    }
+
+    /// Get text embeddings using the Goldbull embedding model
+    pub async fn get_embeddings(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+        let embedding_model = self.goldbull_embedding.read().await;
+        let embeddings = embedding_model.encode_batch(texts).await?;
+        
+        // Convert to Vec<Vec<f32>>
+        let mut result = Vec::new();
+        for row in embeddings.rows() {
+            result.push(row.to_vec());
+        }
+        
+        Ok(result)
+    }
+
+    /// Compute text similarity using embeddings
+    pub async fn text_similarity(&self, text1: &str, text2: &str) -> Result<f32> {
+        let embedding_model = self.goldbull_embedding.read().await;
+        embedding_model.similarity(text1, text2).await
+    }
+
+    /// Advanced NLP analysis using the main Goldbull model
+    pub async fn analyze_text_nlp(&self, text: &str) -> Result<String> {
+        let model = self.goldbull_model.read().await;
+        model.analyze_text(text).await
+    }
+
+    /// Extract named entities using NLP
+    pub async fn extract_entities(&self, text: &str) -> Result<String> {
+        let model = self.goldbull_model.read().await;
+        model.extract_entities(text).await
+    }
+
+    /// Classify text into categories
+    pub async fn classify_text(&self, text: &str, categories: &[String]) -> Result<String> {
+        let model = self.goldbull_model.read().await;
+        model.classify_text(text, categories).await
     }
 }
 

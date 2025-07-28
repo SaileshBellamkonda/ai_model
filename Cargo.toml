@@ -1,13 +1,13 @@
 [package]
-name = "ai_model"
+name = "goldbull"
 version = "0.1.0"
 edition = "2021"
-description = "Lightweight, high-accuracy machine learning model with text generation, code completion, Q&A, summarization, and visual analysis capabilities"
-authors = ["AI Model Team"]
+description = "Goldbull: Enterprise-grade ML model with BPE tokenizer, embedding model, and NLP capabilities"
+authors = ["Goldbull AI Team"]
 license = "MIT"
 
 [[bin]]
-name = "ai_model"
+name = "goldbull"
 path = "src/main.rs"
 
 [[bin]]
@@ -19,7 +19,7 @@ name = "train_model"
 path = "src/bin/train_model.rs"
 
 [lib]
-name = "ai_model"
+name = "goldbull"
 path = "src/lib.rs"
 
 [dependencies]
@@ -37,11 +37,14 @@ env_logger = "0.10"
 uuid = { version = "1.0", features = ["v4"] }
 num_cpus = "1.0"
 async-trait = "0.1"
-# BPE tokenizer dependencies
-tokenizers = "0.19"
+# Unicode-aware text segmentation for tiktoken-style BPE
+unicode-segmentation = "1.11"
 # Training and dataset utilities  
 regex = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
+# For BPEmb vocabulary integration
+flate2 = "1.0"
+base64 = "0.22"
 
 [dev-dependencies]
 criterion = "0.5"
