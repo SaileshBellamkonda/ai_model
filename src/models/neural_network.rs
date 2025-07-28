@@ -1,4 +1,5 @@
 use crate::{Result, core::ModelConfig};
+use crate::tokenizer::{BpeTokenizer, BpeTokenizerConfig};
 use ndarray::{Array1, Array2};
 use rand::Rng;
 use std::collections::HashMap;
@@ -13,8 +14,8 @@ pub struct NeuralNetwork {
     feed_forward_weights: Vec<FeedForwardLayer>,
     output_weights: Array2<f32>,
     
-    // Tokenizer
-    tokenizer: SimpleTokenizer,
+    // Tokenizer (support both simple and BPE)
+    tokenizer: TokenizerType,
     
     // Cache for repeated computations
     computation_cache: HashMap<String, Array1<f32>>,
@@ -38,7 +39,45 @@ struct FeedForwardLayer {
     bias_2: Array1<f32>,
 }
 
-/// Simple tokenizer for text processing
+/// Tokenizer types supported by the neural network
+pub enum TokenizerType {
+    Simple(SimpleTokenizer),
+    Bpe(BpeTokenizer),
+}
+
+impl TokenizerType {
+    pub fn encode(&self, text: &str) -> Result<Vec<u32>> {
+        match self {
+            TokenizerType::Simple(tokenizer) => {
+                let tokens = tokenizer.encode(text);
+                Ok(tokens.into_iter().map(|t| t as u32).collect())
+            },
+            TokenizerType::Bpe(tokenizer) => {
+                tokenizer.encode(text, true)
+            },
+        }
+    }
+    
+    pub fn decode(&self, tokens: &[u32]) -> Result<String> {
+        match self {
+            TokenizerType::Simple(tokenizer) => {
+                let usize_tokens: Vec<usize> = tokens.iter().map(|&t| t as usize).collect();
+                Ok(tokenizer.decode(&usize_tokens))
+            },
+            TokenizerType::Bpe(tokenizer) => {
+                tokenizer.decode(tokens, true)
+            },
+        }
+    }
+    
+    pub fn vocab_size(&self) -> usize {
+        match self {
+            TokenizerType::Simple(tokenizer) => tokenizer.vocab_size,
+            TokenizerType::Bpe(tokenizer) => tokenizer.vocab_size(),
+        }
+    }
+}
+/// Simple tokenizer for text processing (fallback/legacy)
 pub struct SimpleTokenizer {
     vocab: HashMap<String, usize>,
     reverse_vocab: HashMap<usize, String>,
@@ -128,8 +167,14 @@ impl NeuralNetwork {
     pub async fn new(config: &ModelConfig) -> Result<Self> {
         let mut rng = rand::thread_rng();
         
-        // Initialize tokenizer
-        let tokenizer = SimpleTokenizer::new(config.vocab_size);
+        // Initialize tokenizer (try BPE first, fallback to simple)
+        let tokenizer = if let Ok(bpe_tokenizer) = BpeTokenizer::new(BpeTokenizerConfig::default()) {
+            log::info!("Using BPE tokenizer");
+            TokenizerType::Bpe(bpe_tokenizer)
+        } else {
+            log::info!("Using simple tokenizer (fallback)");
+            TokenizerType::Simple(SimpleTokenizer::new(config.vocab_size))
+        };
         
         // Initialize embedding weights
         let embedding_weights = Array2::from_shape_fn(
@@ -197,7 +242,7 @@ impl NeuralNetwork {
     
     /// Generate text based on input prompt
     pub async fn generate_text(&self, prompt: &str, max_tokens: usize, temperature: f32) -> Result<String> {
-        let input_tokens = self.tokenizer.encode(prompt);
+        let input_tokens = self.tokenizer.encode(prompt)?;
         let mut generated_tokens = input_tokens.clone();
         
         for _ in 0..max_tokens {
@@ -217,7 +262,7 @@ impl NeuralNetwork {
         
         // Decode only the generated part (excluding input)
         let generated_only = &generated_tokens[input_tokens.len()..];
-        Ok(self.tokenizer.decode(generated_only))
+        self.tokenizer.decode(generated_only)
     }
     
     /// Complete code based on partial input
@@ -256,9 +301,12 @@ impl NeuralNetwork {
     }
     
     /// Predict the next token given a sequence of tokens
-    async fn predict_next_token(&self, tokens: &[usize], temperature: f32) -> Result<usize> {
+    async fn predict_next_token(&self, tokens: &[u32], temperature: f32) -> Result<u32> {
+        // Convert u32 tokens to usize for internal processing
+        let usize_tokens: Vec<usize> = tokens.iter().map(|&t| t as usize).collect();
+        
         // Get embeddings for input tokens
-        let embeddings = self.embed_tokens(tokens)?;
+        let embeddings = self.embed_tokens(&usize_tokens)?;
         
         // Forward pass through the network
         let mut hidden_states = embeddings;
@@ -277,7 +325,9 @@ impl NeuralNetwork {
         
         // Apply temperature and sample
         let probabilities = self.softmax_with_temperature(&logits, temperature);
-        self.sample_from_probabilities(&probabilities)
+        let next_token = self.sample_from_probabilities(&probabilities)?;
+        
+        Ok(next_token as u32)
     }
     
     /// Embed tokens to vectors

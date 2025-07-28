@@ -1,0 +1,7 @@
+{
+  "conversion_time": "2025-07-28T18:17:25.512865707+00:00",
+  "converted_from": "models/bpe_tokenizer.json",
+  "format": "onnx",
+  "note": "This is a placeholder - real implementation would convert actual model weights",
+  "version": "1.0"
+}

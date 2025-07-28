@@ -1,7 +1,9 @@
 use ai_model::{
     AIModel, ModelConfig, TaskType,
     tools::{HttpRequestTool, FileOperationsTool, CalculatorTool},
-    utils::{setup_logging, get_system_info, load_config_from_env}
+    utils::{setup_logging, get_system_info, load_config_from_env},
+    tokenizer::{BpeTokenizer, BpeTokenizerConfig, BigcodeDatasetConfig},
+    inference::{InferenceEngineFactory, InferenceConfig, InferenceEngineType},
 };
 use clap::{Parser, Subcommand};
 use std::io::{self, Write};
@@ -103,6 +105,45 @@ enum Commands {
     
     /// Run benchmark tests
     Benchmark,
+    
+    /// Train BPE tokenizer on bigcode dataset
+    TrainTokenizer {
+        /// Output path for trained tokenizer
+        #[arg(short, long, default_value = "models/bpe_tokenizer.json")]
+        output: String,
+        /// Programming languages to include
+        #[arg(long, value_delimiter = ',')]
+        languages: Vec<String>,
+        /// Maximum samples per language
+        #[arg(long, default_value = "1000")]
+        max_samples: usize,
+    },
+    
+    /// Test inference engines (llama.cpp or ONNX)
+    TestInference {
+        /// Engine type (llamacpp, onnx, native)
+        #[arg(short, long, default_value = "native")]
+        engine: String,
+        /// Model path
+        #[arg(short, long)]
+        model_path: Option<String>,
+        /// Test prompt
+        #[arg(short, long, default_value = "Hello, world!")]
+        prompt: String,
+    },
+    
+    /// Convert model format (for inference engines)
+    ConvertModel {
+        /// Input model path
+        #[arg(short, long)]
+        input: String,
+        /// Output model path
+        #[arg(short, long)]
+        output: String,
+        /// Target format (onnx, gguf)
+        #[arg(short, long)]
+        format: String,
+    },
 }
 
 #[tokio::main]
@@ -189,6 +230,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         Commands::Benchmark => {
             run_benchmark(&model).await?;
+        },
+        
+        Commands::TrainTokenizer { output, languages, max_samples } => {
+            train_bpe_tokenizer(&output, &languages, max_samples).await?;
+        },
+        
+        Commands::TestInference { engine, model_path, prompt } => {
+            test_inference_engine(&engine, model_path.as_deref(), &prompt).await?;
+        },
+        
+        Commands::ConvertModel { input, output, format } => {
+            convert_model_format(&input, &output, &format).await?;
         },
     }
     
@@ -439,4 +492,179 @@ async fn load_config_from_file(path: &str) -> Result<ModelConfig, Box<dyn std::e
     let content = tokio::fs::read_to_string(path).await?;
     let config: ModelConfig = serde_json::from_str(&content)?;
     Ok(config)
+}
+
+/// Train BPE tokenizer on bigcode dataset
+async fn train_bpe_tokenizer(output_path: &str, languages: &[String], max_samples: usize) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Training BPE tokenizer...");
+    println!("Languages: {:?}", languages);
+    println!("Max samples: {}", max_samples);
+    println!("Output path: {}", output_path);
+    
+    // Create tokenizer config
+    let config = BpeTokenizerConfig::default();
+    let mut tokenizer = BpeTokenizer::new(config)?;
+    
+    // Create dataset config
+    let dataset_config = BigcodeDatasetConfig {
+        languages: languages.to_vec(),
+        max_samples_per_language: max_samples / languages.len().max(1),
+        max_total_samples: max_samples,
+        ..Default::default()
+    };
+    
+    // Train on bigcode dataset
+    tokenizer.train_on_bigcode_dataset(&dataset_config).await?;
+    
+    // Save tokenizer
+    if let Some(parent) = std::path::Path::new(output_path).parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    tokenizer.save(output_path)?;
+    
+    println!("BPE tokenizer training completed successfully!");
+    println!("Tokenizer saved to: {}", output_path);
+    
+    Ok(())
+}
+
+/// Test different inference engines
+async fn test_inference_engine(engine_type: &str, model_path: Option<&str>, prompt: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Testing inference engine: {}", engine_type);
+    
+    let engine_type = match engine_type.to_lowercase().as_str() {
+        "llamacpp" | "llama" => InferenceEngineType::LlamaCpp,
+        "onnx" => InferenceEngineType::Onnx,
+        "native" => InferenceEngineType::Native,
+        _ => {
+            println!("Unsupported engine type: {}. Use: llamacpp, onnx, or native", engine_type);
+            return Ok(());
+        }
+    };
+    
+    let config = InferenceConfig {
+        engine_type,
+        model_path: model_path.unwrap_or("").to_string(),
+        ..Default::default()
+    };
+    
+    println!("Engine config: {:?}", config);
+    
+    match &config.engine_type {
+        InferenceEngineType::LlamaCpp | InferenceEngineType::Onnx => {
+            if model_path.is_none() {
+                println!("Model path required for {:?} engine", config.engine_type);
+                return Ok(());
+            }
+            
+            let mut engine = InferenceEngineFactory::create_engine(&config)?;
+            
+            if let Some(path) = model_path {
+                println!("Loading model from: {}", path);
+                match engine.load_model(path).await {
+                    Ok(_) => println!("Model loaded successfully"),
+                    Err(e) => {
+                        println!("Failed to load model: {}", e);
+                        println!("Note: This is expected in demo mode - actual model files not provided");
+                        return Ok(());
+                    }
+                }
+            }
+            
+            println!("Generating text with prompt: '{}'", prompt);
+            match engine.generate_text(prompt, 50, 0.7).await {
+                Ok(result) => {
+                    println!("Generated text: {}", result);
+                    
+                    if let Ok(info) = engine.get_model_info() {
+                        println!("Model info: {:?}", info);
+                    }
+                },
+                Err(e) => println!("Generation failed: {}", e),
+            }
+        },
+        InferenceEngineType::Native => {
+            println!("Testing native engine (current implementation)");
+            let config = ModelConfig::default();
+            let model = AIModel::new(config).await?;
+            
+            let task = TaskType::TextGeneration { 
+                max_tokens: 50, 
+                temperature: 0.7 
+            };
+            
+            match model.execute_task(task, prompt).await {
+                Ok(result) => println!("Generated text: {}", result.text_output()),
+                Err(e) => println!("Generation failed: {}", e),
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+/// Convert model between different formats
+async fn convert_model_format(input_path: &str, output_path: &str, target_format: &str) -> Result<(), Box<dyn std::error::Error>> {
+    println!("Converting model format...");
+    println!("Input: {}", input_path);
+    println!("Output: {}", output_path);
+    println!("Target format: {}", target_format);
+    
+    // Validate input file exists
+    if !std::path::Path::new(input_path).exists() {
+        return Err(format!("Input file does not exist: {}", input_path).into());
+    }
+    
+    // Create output directory if needed
+    if let Some(parent) = std::path::Path::new(output_path).parent() {
+        tokio::fs::create_dir_all(parent).await?;
+    }
+    
+    match target_format.to_lowercase().as_str() {
+        "onnx" => {
+            println!("Converting to ONNX format...");
+            // In a real implementation, this would:
+            // 1. Load the source model
+            // 2. Convert to ONNX format using onnx crate
+            // 3. Save the converted model
+            
+            // For demo purposes, create a placeholder ONNX model
+            let placeholder_model = serde_json::json!({
+                "format": "onnx",
+                "version": "1.0",
+                "converted_from": input_path,
+                "conversion_time": chrono::Utc::now().to_rfc3339(),
+                "note": "This is a placeholder - real implementation would convert actual model weights"
+            });
+            
+            tokio::fs::write(output_path, serde_json::to_string_pretty(&placeholder_model)?).await?;
+            println!("Model converted to ONNX format (placeholder)");
+        },
+        
+        "gguf" | "ggml" => {
+            println!("Converting to GGUF format (for llama.cpp)...");
+            // In a real implementation, this would:
+            // 1. Load the source model weights
+            // 2. Quantize weights if specified  
+            // 3. Save in GGUF format for llama.cpp
+            
+            // For demo purposes, create a placeholder GGUF model
+            let placeholder_model = format!(
+                "# GGUF Model File (Placeholder)\n# Converted from: {}\n# Format: GGUF\n# This is a demo placeholder file\n",
+                input_path
+            );
+            
+            tokio::fs::write(output_path, placeholder_model).await?;
+            println!("Model converted to GGUF format (placeholder)");
+        },
+        
+        _ => {
+            return Err(format!("Unsupported target format: {}. Supported: onnx, gguf", target_format).into());
+        }
+    }
+    
+    println!("Model conversion completed successfully!");
+    println!("Converted model saved to: {}", output_path);
+    
+    Ok(())
 }

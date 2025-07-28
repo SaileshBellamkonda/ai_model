@@ -14,6 +14,8 @@ pub mod tasks;
 pub mod tools;
 pub mod memory;
 pub mod utils;
+pub mod tokenizer;
+pub mod inference;
 
 pub use core::{AIModel, ModelConfig};
 pub use models::neural_network::NeuralNetwork;
@@ -40,6 +42,12 @@ pub enum AIError {
     
     #[error("API error: {0}")]
     ApiError(String),
+    
+    #[error("Model loading failed: {0}")]
+    ModelLoadError(String),
+    
+    #[error("Tokenization error: {0}")]
+    TokenizationError(String),
     
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
