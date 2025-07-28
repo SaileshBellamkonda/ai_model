@@ -1,5 +1,5 @@
 use goldbull_core::{Result, ModelConfig, ModelTrait, Model};
-use candle_core::{Device, Tensor, Module, IndexOp};
+use candle_core::{Device, Tensor, Module};
 use candle_nn::{Linear, Embedding, VarBuilder};
 
 pub struct GoldbullTextModel {
@@ -77,32 +77,13 @@ impl ModelTrait for GoldbullTextModel {
     }
     
     fn generate(&self, input_ids: &Tensor, max_length: usize) -> Result<Vec<u32>> {
-        let mut tokens = Vec::new();
-        let mut current_input = input_ids.clone();
+        // Use the advanced TextGenerator for proper sampling
+        let generator = crate::generation::TextGenerator::new_with_ref(self)
+            .with_temperature(0.8)
+            .with_top_p(0.9)
+            .with_top_k(50);
         
-        // Extract initial tokens
-        let initial_tokens = input_ids.to_vec1::<u32>()
-            .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
-        tokens.extend(initial_tokens);
-        
-        for _ in tokens.len()..max_length {
-            let logits = self.forward(&current_input, None)?;
-            
-            // Get last token logits
-            let last_logits = logits.i((.., logits.dim(1)? - 1, ..))?;
-            
-            // Simple greedy decoding - sample argmax
-            let next_token_id = last_logits.argmax(last_logits.dims().len() - 1)?
-                .to_scalar::<u32>()?;
-            
-            tokens.push(next_token_id);
-            
-            // Update input for next iteration
-            current_input = Tensor::new(&[next_token_id], current_input.device())?
-                .unsqueeze(0)?;
-        }
-        
-        Ok(tokens)
+        generator.generate_with_sampling(input_ids, max_length)
     }
     
     fn save(&self, path: &str) -> Result<()> {
