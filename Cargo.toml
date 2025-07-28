@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "goldbull-core",
     "goldbull-tokenizer",
+    "goldbull-text",
 ]
 
 [workspace.package]

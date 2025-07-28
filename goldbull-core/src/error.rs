@@ -25,6 +25,9 @@ pub enum GoldbullError {
     
     #[error("Inference error: {0}")]
     Inference(String),
+    
+    #[error("Candle error: {0}")]
+    Candle(#[from] candle_core::Error),
 }
 
 pub type Result<T> = std::result::Result<T, GoldbullError>;
