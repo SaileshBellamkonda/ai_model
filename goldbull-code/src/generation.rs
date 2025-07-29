@@ -554,7 +554,7 @@ impl<'a> CodeGenerator<'a> {
     fn is_eos_token(&self, token: u32) -> bool {
         // Check against known EOS token IDs
         let eos_tokens = [
-            self.model.tokenizer().token_to_id("<|im_end|>"),
+            self.model.tokenizer().token_to_id("<eos>"),
             self.model.tokenizer().token_to_id("</s>"),
         ];
         

@@ -1,0 +1,40 @@
+[package]
+name = "goldbull-vision"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Goldbull Vision - Computer Vision AI Model"
+
+[dependencies]
+# Core dependencies
+goldbull-core = { path = "../goldbull-core" }
+goldbull-tokenizer = { path = "../goldbull-tokenizer" }
+
+# Workspace dependencies
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+clap.workspace = true
+
+# ML/AI dependencies
+candle-core.workspace = true
+candle-nn.workspace = true
+candle-transformers.workspace = true
+safetensors.workspace = true
+
+# Image processing would go here (placeholder)
+# image = "0.24"
+
+[[bin]]
+name = "goldbull-vision-cli"
+path = "src/main.rs"
+
+[[bin]]
+name = "goldbull-vision-train" 
+path = "src/train.rs"

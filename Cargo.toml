@@ -5,6 +5,11 @@ members = [
     "goldbull-tokenizer",
     "goldbull-text",
     "goldbull-code",
+    "goldbull-sage",
+    "goldbull-brief",
+    "goldbull-vision",
+    "goldbull-multimodel",
+    "goldbull-embedding",
 ]
 
 [workspace.package]

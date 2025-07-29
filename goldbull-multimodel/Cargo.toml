@@ -1,0 +1,38 @@
+[package]
+name = "goldbull-multimodel"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Goldbull Multimodel - Multimodal AI Model"
+
+[dependencies]
+# Core dependencies
+goldbull-core = { path = "../goldbull-core" }
+goldbull-tokenizer = { path = "../goldbull-tokenizer" }
+goldbull-vision = { path = "../goldbull-vision" }
+
+# Workspace dependencies
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+clap.workspace = true
+
+# ML/AI dependencies
+candle-core.workspace = true
+candle-nn.workspace = true
+candle-transformers.workspace = true
+safetensors.workspace = true
+
+[[bin]]
+name = "goldbull-multimodel-cli"
+path = "src/main.rs"
+
+[[bin]]
+name = "goldbull-multimodel-train"
+path = "src/train.rs"
