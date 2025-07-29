@@ -542,7 +542,7 @@ impl CodeGenerator {
         // Check against known EOS token IDs
         let eos_tokens = [
             self.model.tokenizer().token_to_id("<|im_end|>"),
-            self.model.tokenizer().token_to_id("<|endoftext|>"),
+            self.model.tokenizer().token_to_id("</s>"),
         ];
         
         eos_tokens.iter().any(|&eos| eos == Some(token))
