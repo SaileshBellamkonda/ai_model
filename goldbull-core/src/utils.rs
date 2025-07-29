@@ -9,6 +9,17 @@ pub fn ensure_dir_exists(path: &str) -> Result<()> {
     Ok(())
 }
 
+/// Get available system memory using platform-specific APIs
+/// 
+/// This function attempts to determine the actual available memory on the system
+/// using platform-specific approaches:
+/// 
+/// - Linux: Reads /proc/meminfo to get MemAvailable
+/// - macOS: Uses sysctl to get total memory, returns 75% as available estimate
+/// - Windows: Returns conservative default (would use Windows API in production)
+/// - Fallback: Returns 2GB conservative estimate for unknown platforms
+/// 
+/// Returns: Available memory in bytes
 pub fn get_available_memory() -> usize {
     // Get available system memory using platform-specific APIs
     #[cfg(target_os = "linux")]

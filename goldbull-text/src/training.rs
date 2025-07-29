@@ -56,6 +56,17 @@ impl Trainer {
         Ok(())
     }
     
+    /// Train on a single batch of text data
+    /// 
+    /// This method implements a simplified training step:
+    /// 1. Tokenizes each text in the batch
+    /// 2. Creates input/target pairs for next-token prediction
+    /// 3. Runs forward pass through the model
+    /// 4. Computes loss (simplified cross-entropy proxy)
+    /// 5. Returns average loss for the batch
+    ///
+    /// Note: This is a demonstration implementation. A production training loop
+    /// would include proper gradient computation and backpropagation.
     fn train_batch(&mut self, batch_texts: &[String]) -> Result<f64> {
         use goldbull_tokenizer::{Tokenizer, BpeTokenizer, TokenizerConfig};
         use candle_core::Tensor;
@@ -107,6 +118,15 @@ impl Trainer {
     }
     
     /// Compute cross-entropy loss between predictions and targets
+    /// 
+    /// This is a simplified implementation that uses accuracy as a proxy for loss.
+    /// In a production system, this would compute proper cross-entropy loss:
+    /// loss = -sum(target * log(softmax(logits)))
+    /// 
+    /// Current implementation:
+    /// 1. Gets predicted tokens using argmax
+    /// 2. Compares with target tokens to compute accuracy
+    /// 3. Returns (1.0 - accuracy) as loss proxy
     fn compute_loss(&self, logits: &Tensor, targets: &Tensor) -> Result<f64> {
         // Simplified loss computation
         // In a real implementation, this would use proper cross-entropy loss
@@ -155,6 +175,10 @@ impl Trainer {
     }
 }
 
+/// Data loader for training text models
+/// 
+/// Handles loading and batching of text data from a directory of .txt files.
+/// Designed for streaming large datasets that don't fit in memory.
 pub struct DataLoader {
     file_paths: Vec<String>,
     batch_size: usize,
@@ -162,6 +186,14 @@ pub struct DataLoader {
 }
 
 impl DataLoader {
+    /// Create a new data loader for a directory of text files
+    /// 
+    /// Scans the specified directory for .txt files and prepares them for batched loading.
+    /// Files are loaded on-demand to minimize memory usage.
+    /// 
+    /// Parameters:
+    /// - data_dir: Path to directory containing .txt training files
+    /// - batch_size: Number of texts to load per batch
     pub fn new(data_dir: &str, batch_size: usize) -> Result<Self> {
         let mut file_paths = Vec::new();
         
@@ -182,6 +214,12 @@ impl DataLoader {
         })
     }
     
+    /// Load the next batch of text data
+    /// 
+    /// Returns the next batch of text files as strings, or None if all data has been processed.
+    /// Each call loads and reads the next batch_size files from disk.
+    /// 
+    /// Returns: Some(Vec<String>) with text contents, or None if no more data
     pub fn next_batch(&mut self) -> Result<Option<Vec<String>>> {
         if self.current_index >= self.file_paths.len() {
             return Ok(None);
@@ -200,6 +238,10 @@ impl DataLoader {
         Ok(Some(batch_texts))
     }
     
+    /// Reset the data loader to the beginning of the dataset
+    /// 
+    /// Resets the internal index to start loading from the first file again.
+    /// Useful for multi-epoch training.
     pub fn reset(&mut self) {
         self.current_index = 0;
     }

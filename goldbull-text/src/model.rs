@@ -47,6 +47,20 @@ impl GoldbullTextModel {
     }
     
     /// Create model from pre-trained weights file (safetensors format)
+    /// 
+    /// This method loads a model from pre-trained weights stored in safetensors format.
+    /// Safetensors is a safe, fast serialization format for ML tensors.
+    /// 
+    /// Process:
+    /// 1. Validates that weights file exists
+    /// 2. Loads tensors from safetensors file using candle
+    /// 3. Creates VarBuilder from loaded tensors
+    /// 4. Initializes model components with loaded weights
+    /// 
+    /// Parameters:
+    /// - weights_path: Path to .safetensors file containing model weights
+    /// - config: Model configuration (architecture, sizes, etc.)
+    /// - device: Compute device (CPU/GPU) for model execution
     pub fn from_pretrained(weights_path: &str, config: ModelConfig, device: Device) -> Result<Self> {
         use std::path::Path;
         

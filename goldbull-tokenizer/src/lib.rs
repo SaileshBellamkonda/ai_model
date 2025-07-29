@@ -23,6 +23,17 @@ pub struct TokenizerConfig {
 }
 
 impl Default for TokenizerConfig {
+    /// Default configuration for the tokenizer with OpenAI-style chat template tokens
+    /// 
+    /// Special tokens follow OpenAI's format for chat completion:
+    /// - <|im_start|>: Beginning of message (replaces traditional BOS)
+    /// - <|im_end|>: End of message (replaces traditional EOS)  
+    /// - <|system|>, <|user|>, <|assistant|>: Role-specific tokens for chat
+    /// - <pad>: Padding token for batch processing
+    /// - <unk>: Unknown token for out-of-vocabulary words
+    /// 
+    /// Vocabulary size set to 1M for multilingual BPEmb compatibility
+    /// Max sequence length set to 32K tokens for long-context support
     fn default() -> Self {
         let mut special_tokens = HashMap::new();
         // Chat template special tokens following OpenAI's format
