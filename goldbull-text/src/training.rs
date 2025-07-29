@@ -1,6 +1,6 @@
 use goldbull_core::{Result, ModelTrait};
 use crate::GoldbullText;
-use candle_core::{Device, Tensor};
+use candle_core::Tensor;
 use std::path::Path;
 
 pub struct Trainer {
@@ -58,12 +58,15 @@ impl Trainer {
     
     /// Train on a single batch of text data
     /// 
-    /// This method implements a simplified training step:
+    /// This method implements a real training step with proper cross-entropy loss:
     /// 1. Tokenizes each text in the batch
     /// 2. Creates input/target pairs for next-token prediction
     /// 3. Runs forward pass through the model
-    /// 4. Computes loss (simplified cross-entropy proxy)
+    /// 4. Computes cross-entropy loss using log_softmax and negative log likelihood
     /// 5. Returns average loss for the batch
+    /// 
+    /// Note: Backward pass and weight updates are not implemented as they require
+    /// automatic differentiation framework integration (like PyTorch's autograd)
     ///
     /// Note: This is a demonstration implementation. A production training loop
     /// would include proper gradient computation and backpropagation.
@@ -119,41 +122,70 @@ impl Trainer {
     
     /// Compute cross-entropy loss between predictions and targets
     /// 
-    /// This is a simplified implementation that uses accuracy as a proxy for loss.
-    /// In a production system, this would compute proper cross-entropy loss:
+    /// This implements the standard cross-entropy loss function used in language modeling:
     /// loss = -sum(target * log(softmax(logits)))
     /// 
-    /// Current implementation:
-    /// 1. Gets predicted tokens using argmax
-    /// 2. Compares with target tokens to compute accuracy
-    /// 3. Returns (1.0 - accuracy) as loss proxy
+    /// For efficiency with large vocabularies, this implementation:
+    /// 1. Applies log_softmax to logits for numerical stability
+    /// 2. Uses advanced indexing to select relevant logits for targets
+    /// 3. Computes negative log likelihood loss
+    /// 4. Returns mean loss across sequence length
     fn compute_loss(&self, logits: &Tensor, targets: &Tensor) -> Result<f64> {
-        // Simplified loss computation
-        // In a real implementation, this would use proper cross-entropy loss
-        // For now, we'll compute a proxy loss based on prediction accuracy
-        
-        let (_seq_len, _vocab_size) = logits.dims2()
+        let (seq_len, vocab_size) = logits.dims2()
             .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
         
-        // Get predicted token IDs (argmax of logits)
-        let predicted_ids = logits.argmax(1)
-            .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+        // Apply log_softmax for numerical stability: log(softmax(x)) = x - log(sum(exp(x)))
+        let log_probs = {
+            // Compute max for numerical stability
+            let max_logits = logits.max_keepdim(1)
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            
+            // Subtract max and compute exp
+            let shifted_logits = logits.broadcast_sub(&max_logits)
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            let exp_logits = shifted_logits.exp()
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            
+            // Sum exp values and take log
+            let sum_exp = exp_logits.sum_keepdim(1)
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            let log_sum_exp = sum_exp.log()
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            
+            // Compute log_softmax = logits - max - log(sum(exp(shifted_logits)))
+            let max_broadcast = max_logits.broadcast_as(logits.shape())
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            let log_sum_broadcast = log_sum_exp.broadcast_as(logits.shape())
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+            
+            logits.sub(&max_broadcast)
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?
+                .sub(&log_sum_broadcast)
+                .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?
+        };
         
-        // Compute accuracy as proxy for loss (1.0 - accuracy)
+        // Convert targets to vector for indexing
         let targets_vec = targets.to_vec1::<u32>()
             .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
-        let predicted_vec = predicted_ids.to_vec1::<u32>()
+        
+        // Compute negative log likelihood loss
+        let mut total_loss = 0.0f64;
+        let log_probs_data = log_probs.to_vec2::<f32>()
             .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
         
-        let correct_predictions = targets_vec.iter()
-            .zip(predicted_vec.iter())
-            .filter(|(target, pred)| target == pred)
-            .count();
+        for (i, &target_id) in targets_vec.iter().enumerate() {
+            if i < seq_len && (target_id as usize) < vocab_size {
+                // Get the log probability for the target token
+                let target_log_prob = log_probs_data[i][target_id as usize];
+                // Negative log likelihood
+                total_loss -= target_log_prob as f64;
+            }
+        }
         
-        let accuracy = correct_predictions as f64 / targets_vec.len() as f64;
-        let loss = 1.0 - accuracy + 0.1; // Add baseline loss
+        // Return mean loss across sequence length
+        let mean_loss = total_loss / seq_len as f64;
         
-        Ok(loss)
+        Ok(mean_loss)
     }
     
     fn train_epoch(&mut self, _dataset_path: &str) -> Result<()> {

@@ -11,12 +11,12 @@ pub fn ensure_dir_exists(path: &str) -> Result<()> {
 
 /// Get available system memory using platform-specific APIs
 /// 
-/// This function attempts to determine the actual available memory on the system
+/// This function determines the actual available memory on the system
 /// using platform-specific approaches:
 /// 
 /// - Linux: Reads /proc/meminfo to get MemAvailable
 /// - macOS: Uses sysctl to get total memory, returns 75% as available estimate
-/// - Windows: Returns conservative default (would use Windows API in production)
+/// - Windows: Uses GlobalMemoryStatusEx API to get actual available physical memory
 /// - Fallback: Returns 2GB conservative estimate for unknown platforms
 /// 
 /// Returns: Available memory in bytes
@@ -57,10 +57,24 @@ pub fn get_available_memory() -> usize {
     
     #[cfg(target_os = "windows")]
     {
-        // Use Windows API through std (simplified approach)
-        // In production, you'd use the Windows API directly
-        // For now, return a conservative default
-        return 4 * 1024 * 1024 * 1024; // 4GB default for Windows
+        // Use Windows API to get actual memory information
+        use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+        
+        let mut mem_status = MEMORYSTATUSEX {
+            dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
+            ..Default::default()
+        };
+        
+        unsafe {
+            if GlobalMemoryStatusEx(&mut mem_status).as_bool() {
+                // Return available physical memory in bytes
+                // ullAvailPhys contains available physical memory
+                return mem_status.ullAvailPhys as usize;
+            }
+        }
+        
+        // Fallback if Windows API call fails
+        return 4 * 1024 * 1024 * 1024; // 4GB fallback
     }
     
     // Fallback for unsupported platforms or if system calls fail

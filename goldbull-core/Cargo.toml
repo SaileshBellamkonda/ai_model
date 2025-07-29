@@ -19,3 +19,9 @@ candle-core.workspace = true
 candle-nn.workspace = true
 ndarray.workspace = true
 safetensors.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.52", features = [
+    "Win32_System_SystemInformation",
+    "Win32_Foundation",
+] }
