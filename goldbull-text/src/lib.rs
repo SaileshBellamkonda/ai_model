@@ -15,7 +15,7 @@ pub use generation::TextGenerator;
 pub struct GoldbullText {
     model: GoldbullTextModel,
     tokenizer: TikTokenizer,
-    device: Device,
+    pub device: Device,
 }
 
 impl GoldbullText {
@@ -63,5 +63,15 @@ impl GoldbullText {
     
     pub fn is_within_memory_limit(&self) -> bool {
         self.model.is_within_memory_limit()
+    }
+    
+    /// Get access to the underlying model for training
+    pub fn get_model(&self) -> &GoldbullTextModel {
+        &self.model
+    }
+    
+    /// Get mutable access to the underlying model for training
+    pub fn get_model_mut(&mut self) -> &mut GoldbullTextModel {
+        &mut self.model
     }
 }

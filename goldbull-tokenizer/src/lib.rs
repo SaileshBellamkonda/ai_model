@@ -25,17 +25,21 @@ pub struct TokenizerConfig {
 impl Default for TokenizerConfig {
     fn default() -> Self {
         let mut special_tokens = HashMap::new();
+        // Chat template special tokens following OpenAI's format
         special_tokens.insert("<pad>".to_string(), 0);
-        special_tokens.insert("<eos>".to_string(), 1);
-        special_tokens.insert("<bos>".to_string(), 2);
+        special_tokens.insert("<|im_end|>".to_string(), 1);
+        special_tokens.insert("<|im_start|>".to_string(), 2);
         special_tokens.insert("<unk>".to_string(), 3);
+        special_tokens.insert("<|system|>".to_string(), 4);
+        special_tokens.insert("<|user|>".to_string(), 5);
+        special_tokens.insert("<|assistant|>".to_string(), 6);
         
         Self {
             vocab_size: 1_000_000, // BPEmb multilingual vocab
             max_sequence_length: 32768,
             pad_token: "<pad>".to_string(),
-            eos_token: "<eos>".to_string(),
-            bos_token: "<bos>".to_string(),
+            eos_token: "<|im_end|>".to_string(),
+            bos_token: "<|im_start|>".to_string(),
             unk_token: "<unk>".to_string(),
             special_tokens,
             merges_file: None,

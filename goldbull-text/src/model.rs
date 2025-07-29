@@ -15,10 +15,57 @@ impl GoldbullTextModel {
         let vocab_size = config.vocab_size;
         let hidden_size = config.hidden_size;
         
-        // Initialize with dummy VarBuilder - in real implementation would load from weights
+        // Initialize VarBuilder for weight loading and initialization
         let vs = candle_nn::VarMap::new();
         let vb = VarBuilder::from_varmap(&vs, candle_core::DType::F32, &device);
         
+        // Initialize model components with proper weight initialization
+        let embeddings = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embeddings"))
+            .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+        
+        let mut layers = Vec::new();
+        for i in 0..config.num_layers {
+            let layer = super::transformer::TransformerLayer::new(
+                &config,
+                vb.pp(&format!("layers.{}", i)),
+            )?;
+            layers.push(layer);
+        }
+        
+        let lm_head = candle_nn::linear(hidden_size, vocab_size, vb.pp("lm_head"))
+            .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
+        
+        let base = Model::new(config, device)?;
+        
+        Ok(Self {
+            base,
+            embeddings,
+            layers,
+            lm_head,
+            vocab_size,
+        })
+    }
+    
+    /// Create model from pre-trained weights file (safetensors format)
+    pub fn from_pretrained(weights_path: &str, config: ModelConfig, device: Device) -> Result<Self> {
+        use std::path::Path;
+        
+        if !Path::new(weights_path).exists() {
+            return Err(goldbull_core::GoldbullError::Model(
+                format!("Weights file not found: {}", weights_path)
+            ));
+        }
+        
+        // Load weights from safetensors file
+        let weights = candle_core::safetensors::load(weights_path, &device)
+            .map_err(|e| goldbull_core::GoldbullError::Model(format!("Failed to load weights: {}", e)))?;
+        
+        let vb = VarBuilder::from_tensors(weights, candle_core::DType::F32, &device);
+        
+        let vocab_size = config.vocab_size;
+        let hidden_size = config.hidden_size;
+        
+        // Load model components from pre-trained weights
         let embeddings = candle_nn::embedding(vocab_size, hidden_size, vb.pp("embeddings"))
             .map_err(|e| goldbull_core::GoldbullError::Model(e.to_string()))?;
         
@@ -95,9 +142,25 @@ impl ModelTrait for GoldbullTextModel {
     
     fn load(path: &str, device: &Device) -> Result<Self> {
         let config_path = format!("{}/config.json", path);
+        let weights_path = format!("{}/model.safetensors", path);
+        
+        // Load configuration
+        if !std::path::Path::new(&config_path).exists() {
+            return Err(goldbull_core::GoldbullError::Model(
+                format!("Config file not found: {}", config_path)
+            ));
+        }
+        
         let config_content = std::fs::read_to_string(config_path)?;
         let config: ModelConfig = serde_json::from_str(&config_content)?;
         
-        Self::new(config, device.clone())
+        // Try to load from pre-trained weights, fall back to new model if not found
+        if std::path::Path::new(&weights_path).exists() {
+            Self::from_pretrained(&weights_path, config, device.clone())
+        } else {
+            // No weights found, create new model with random initialization
+            println!("Warning: No pre-trained weights found at {}, using random initialization", weights_path);
+            Self::new(config, device.clone())
+        }
     }
 }
