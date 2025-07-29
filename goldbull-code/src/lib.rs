@@ -32,7 +32,7 @@ pub async fn complete_code(
     model: &GoldbullCode,
     request: CompletionRequest,
 ) -> Result<CompletionResponse> {
-    let generator = CodeGenerator::new(model.clone())?;
+    let mut generator = CodeGenerator::new(model)?;
     generator.complete(request).await
 }
 

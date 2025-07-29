@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor};
+use candle_core::{Device, Tensor, Module};
 use candle_nn::VarMap;
 use goldbull_core::{ModelConfig, utils::get_available_memory};
-use goldbull_tokenizer::BpeTokenizer;
+use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -193,7 +193,6 @@ pub struct DatasetMetadata {
 }
 
 /// Language-specific code processor
-#[derive(Debug)]
 pub struct CodeProcessor {
     /// Language type
     language: LanguageType,
@@ -203,6 +202,14 @@ pub struct CodeProcessor {
     tokenization_rules: TokenizationRules,
     /// Code quality validator
     quality_validator: QualityValidator,
+}
+
+impl std::fmt::Debug for CodeProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CodeProcessor")
+            .field("language", &self.language)
+            .finish()
+    }
 }
 
 /// Tokenization rules for specific languages
@@ -293,7 +300,6 @@ impl Default for TrainingMetrics {
 }
 
 /// Optimizer for code model training
-#[derive(Debug)]
 pub struct CodeOptimizer {
     /// Optimizer type (Adam, AdamW, SGD)
     optimizer_type: OptimizerType,
@@ -307,6 +313,17 @@ pub struct CodeOptimizer {
     accumulated_gradients: VarMap,
     /// Optimizer state
     optimizer_state: HashMap<String, Tensor>,
+}
+
+impl std::fmt::Debug for CodeOptimizer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CodeOptimizer")
+            .field("optimizer_type", &self.optimizer_type)
+            .field("learning_rate", &self.learning_rate)
+            .field("momentum", &self.momentum)
+            .field("weight_decay", &self.weight_decay)
+            .finish()
+    }
 }
 
 /// Optimizer types
@@ -550,10 +567,13 @@ impl Trainer {
             // Forward pass
             let (loss, _logits) = self.forward_pass(&batch)?;
             
+            // Extract loss value before move
+            let loss_value = loss.to_scalar::<f64>()?;
+            
             // Backward pass and optimization step
             self.backward_pass(loss)?;
             
-            total_loss += loss.to_scalar::<f64>()?;
+            total_loss += loss_value;
             batch_count += 1;
             
             // Update learning rate
@@ -634,7 +654,7 @@ impl Trainer {
             }
         }
         
-        Tensor::from_vec(gathered_probs, seq_len, log_probs.device())
+        Ok(Tensor::from_vec(gathered_probs, seq_len, log_probs.device())?)
     }
     
     /// Backward pass and parameter update
@@ -894,7 +914,7 @@ impl CodeDataset {
         
         for (idx, sample) in samples.iter().enumerate() {
             // Tokenize code
-            let tokens = self.tokenizer.encode(&sample.code, true)?;
+            let tokens = self.tokenizer.encode(&sample.code)?;
             
             // Create input and target sequences (shifted by 1 for next-token prediction)
             if tokens.len() > 1 {

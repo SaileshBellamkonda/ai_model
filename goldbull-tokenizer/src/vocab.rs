@@ -18,7 +18,7 @@ impl Vocabulary {
         }
     }
     
-    pub fn from_bpemb_url(lang: &str, vocab_size: usize) -> Result<Self> {
+    pub fn from_bpemb_url(_lang: &str, vocab_size: usize) -> Result<Self> {
         // Download and load BPEmb vocabulary
         // For now, create a mock vocabulary
         let mut vocab = Self::new();

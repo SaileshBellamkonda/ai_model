@@ -1,9 +1,9 @@
 use crate::{Tokenizer, TokenizerConfig};
 use goldbull_core::Result;
 use std::collections::HashMap;
-use unicode_segmentation::UnicodeSegmentation;
 use regex::Regex;
 
+#[derive(Debug, Clone)]
 pub struct BpeTokenizer {
     config: TokenizerConfig,
     vocab: HashMap<String, u32>,
@@ -99,6 +99,16 @@ impl BpeTokenizer {
         }
         
         word_tokens
+    }
+    
+    /// Get token ID by token string
+    pub fn token_to_id(&self, token: &str) -> Option<u32> {
+        self.token_to_id.get(token).copied()
+    }
+    
+    /// Get token string by token ID  
+    pub fn id_to_token(&self, id: u32) -> Option<&str> {
+        self.id_to_token.get(&id).map(|s| s.as_str())
     }
 }
 

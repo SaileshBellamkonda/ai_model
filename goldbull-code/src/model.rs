@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor};
+use candle_core::{Device, Tensor, Module, DType};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::{ModelConfig, GoldbullError};
 use goldbull_tokenizer::BpeTokenizer;
@@ -9,7 +9,6 @@ use std::collections::HashMap;
 
 /// Code completion transformer model
 /// Specialized for code understanding with syntax-aware attention patterns
-#[derive(Debug)]
 pub struct GoldbullCode {
     /// Model configuration parameters
     config: ModelConfig,
@@ -27,6 +26,24 @@ pub struct GoldbullCode {
     tokenizer: BpeTokenizer,
     /// Variable map for weight management
     var_map: VarMap,
+}
+
+impl std::fmt::Debug for GoldbullCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GoldbullCode")
+            .field("config", &self.config)
+            .field("device", &self.device)
+            .field("tokenizer", &"BpeTokenizer")
+            .finish()
+    }
+}
+
+impl Clone for GoldbullCode {
+    fn clone(&self) -> Self {
+        // Note: For a real implementation, we'd need to properly clone the neural network weights
+        // For now, this is a placeholder that creates a new instance with the same config
+        Self::new(self.config.clone(), self.device.clone()).unwrap()
+    }
 }
 
 /// Transformer block specialized for code completion
@@ -263,7 +280,7 @@ impl GoldbullCode {
         
         // Broadcast and add to embeddings
         let pos_tensor = pos_tensor.unsqueeze(0)?.broadcast_as(embeddings.shape())?;
-        embeddings.add(&pos_tensor)
+        Ok(embeddings.add(&pos_tensor)?)
     }
     
     /// Get model configuration
@@ -436,7 +453,7 @@ impl CodeTransformerBlock {
         // Pre-norm feed-forward with residual connection
         let normed = self.feed_forward_norm.forward(&hidden_states)?;
         let ff_output = self.feed_forward.forward(&normed)?;
-        hidden_states.add(&ff_output)
+        Ok(hidden_states.add(&ff_output)?)
     }
 }
 
@@ -496,7 +513,8 @@ impl CodeAttention {
         // Apply attention mask if provided
         let attention_scores = if let Some(mask) = attention_mask {
             let mask = mask.unsqueeze(1)?.unsqueeze(1)?; // Broadcast for heads
-            attention_scores.add(&(mask * -1e9))?
+            let mask_value = (&mask * -1e9)?;
+            attention_scores.add(&mask_value)?
         } else {
             attention_scores
         };
@@ -516,7 +534,7 @@ impl CodeAttention {
             .reshape((batch_size, seq_len, self.hidden_size))?;
         
         // Output projection
-        self.output_proj.forward(&context)
+        Ok(self.output_proj.forward(&context)?)
     }
     
     /// Create causal attention mask for autoregressive generation
@@ -529,7 +547,7 @@ impl CodeAttention {
             }
         }
         
-        Tensor::from_vec(mask_data, (seq_len, seq_len), device)
+        Ok(Tensor::from_vec(mask_data, (seq_len, seq_len), device)?)
     }
 }
 
@@ -559,7 +577,7 @@ impl CodeFeedForward {
         let intermediate = self.gelu_activation(&intermediate)?;
         
         // Second linear transformation
-        self.linear2.forward(&intermediate)
+        Ok(self.linear2.forward(&intermediate)?)
     }
     
     /// GELU activation function implementation
@@ -573,7 +591,7 @@ impl CodeFeedForward {
         let inner = (inner * sqrt_2_over_pi)?;
         let tanh_term = inner.tanh()?;
         let one_plus_tanh = (tanh_term + 1.0)?;
-        let result = (x * &one_plus_tanh)? * 0.5;
+        let result = ((x * &one_plus_tanh)? * 0.5)?;
         
         Ok(result)
     }

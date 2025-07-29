@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use candle_core::DType;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelConfig {
@@ -14,6 +15,12 @@ pub struct ModelConfig {
     pub layer_norm_eps: f64,
     pub use_bias: bool,
     pub rope_scaling: Option<RopeScaling>,
+    #[serde(skip, default = "default_dtype")]
+    pub dtype: DType,
+}
+
+fn default_dtype() -> DType {
+    DType::F32
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,6 +55,7 @@ impl Default for ModelConfig {
             layer_norm_eps: 1e-5,
             use_bias: false,
             rope_scaling: None,
+            dtype: DType::F32,
         }
     }
 }

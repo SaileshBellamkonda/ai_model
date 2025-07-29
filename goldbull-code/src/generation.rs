@@ -1,6 +1,6 @@
 use anyhow::Result;
-use candle_core::{Device, Tensor};
-use goldbull_tokenizer::BpeTokenizer;
+use candle_core::{Device, Tensor, IndexOp, Module};
+use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use rand::Rng;
 use std::collections::VecDeque;
 use crate::model::GoldbullCode;
@@ -9,9 +9,9 @@ use crate::syntax::{LanguageType, SyntaxAnalyzer, CodeFeatures};
 
 /// Advanced code generation engine
 /// Combines transformer-based generation with syntax awareness and code intelligence
-pub struct CodeGenerator {
+pub struct CodeGenerator<'a> {
     /// Reference to the code completion model
-    model: GoldbullCode,
+    model: &'a GoldbullCode,
     /// Completion engine for intelligent suggestions
     completion_engine: CompletionEngine,
     /// Code generation configuration
@@ -274,12 +274,19 @@ pub struct GenerationMetadata {
 }
 
 /// Code quality validator
-#[derive(Debug)]
 pub struct QualityValidator {
     /// Language-specific validators
     language_validators: std::collections::HashMap<LanguageType, Box<dyn LanguageValidator>>,
     /// Universal quality rules
     universal_rules: Vec<QualityRule>,
+}
+
+impl std::fmt::Debug for QualityValidator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QualityValidator")
+            .field("universal_rules", &self.universal_rules)
+            .finish()
+    }
 }
 
 /// Language-specific validator trait
@@ -307,12 +314,18 @@ pub struct QualityRule {
 }
 
 /// Syntax-aware post-processor
-#[derive(Debug)]
 pub struct SyntaxPostProcessor {
     /// Language-specific formatters
     formatters: std::collections::HashMap<LanguageType, Box<dyn CodeFormatter>>,
     /// Auto-completion engines
     completers: std::collections::HashMap<LanguageType, Box<dyn AutoCompleter>>,
+}
+
+impl std::fmt::Debug for SyntaxPostProcessor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SyntaxPostProcessor")
+            .finish()
+    }
 }
 
 /// Code formatting trait
@@ -329,7 +342,7 @@ pub trait AutoCompleter {
     fn add_missing_imports(&self, code: &str) -> Result<String>;
 }
 
-impl CodeGenerator {
+impl<'a> CodeGenerator<'a> {
     /// Create a new code generator
     /// 
     /// # Arguments
@@ -337,7 +350,7 @@ impl CodeGenerator {
     /// 
     /// # Returns
     /// * `Result<Self>` - Initialized generator or error
-    pub fn new(model: GoldbullCode) -> Result<Self> {
+    pub fn new(model: &'a GoldbullCode) -> Result<Self> {
         let completion_engine = CompletionEngine::new()?;
         let config = GenerationConfig::default();
         let quality_validator = QualityValidator::new()?;
@@ -359,7 +372,7 @@ impl CodeGenerator {
     /// 
     /// # Returns
     /// * `Result<GenerationResponse>` - Generated code response or error
-    pub async fn generate(&mut self, request: GenerationRequest) -> Result<GenerationResponse> {
+    pub async fn generate(&mut self, request: GenerationRequest) -> Result<Box<GenerationResponse>> {
         let start_time = std::time::Instant::now();
         
         tracing::info!(
@@ -391,7 +404,7 @@ impl CodeGenerator {
         
         let generation_time_ms = start_time.elapsed().as_millis() as u64;
         
-        Ok(GenerationResponse {
+        Ok(Box::new(GenerationResponse {
             code: processed_code.clone(),
             confidence: self.calculate_confidence(&processed_code, &quality_metrics),
             quality_metrics,
@@ -404,7 +417,7 @@ impl CodeGenerator {
                 strategy: "transformer_with_syntax_awareness".to_string(),
                 post_processing: vec!["syntax_validation".to_string(), "style_formatting".to_string()],
             },
-        })
+        }))
     }
     
     /// Complete code using completion engine
@@ -552,7 +565,7 @@ impl CodeGenerator {
     fn is_statement_end_token(&self, token: u32) -> bool {
         if let Some(token_str) = self.model.tokenizer().id_to_token(token) {
             // Common statement end patterns
-            matches!(token_str.as_str(), ";" | "}" | "\n" | ":\n")
+            matches!(token_str, ";" | "}" | "\n" | ":\n")
         } else {
             false
         }
@@ -615,7 +628,7 @@ impl CodeGenerator {
                     ..request.clone()
                 };
                 
-                if let Ok(alt_response) = self.generate(alt_request).await {
+                if let Ok(alt_response) = Box::pin(self.generate(alt_request)).await {
                     if alt_response.code != primary_code {
                         alternatives.push(CodeAlternative {
                             code: alt_response.code,
