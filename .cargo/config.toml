@@ -1,0 +1,15 @@
+# Cargo configuration for cross-compilation
+
+[target.aarch64-unknown-linux-gnu]
+linker = "aarch64-linux-gnu-gcc"
+
+[target.aarch64-pc-windows-msvc]
+# Windows ARM64 cross-compilation works out of the box on Windows
+
+[profile.release]
+# Optimize for small binary size and performance
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
