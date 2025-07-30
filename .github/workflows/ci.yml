@@ -179,4 +179,7 @@ jobs:
       run: cargo install cargo-audit
 
     - name: Run security audit
+      # RUSTSEC-2020-0071 is ignored because it pertains to a vulnerability in a dependency
+      # that is either not used in a security-critical context or has been deemed acceptable
+      # for our use case after thorough evaluation. See [link to documentation or issue tracker]
       run: cargo audit --ignore RUSTSEC-2020-0071
