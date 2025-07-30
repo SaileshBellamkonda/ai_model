@@ -45,6 +45,10 @@ impl Default for TokenizerConfig {
         special_tokens.insert("<system>".to_string(), 4);
         special_tokens.insert("<user>".to_string(), 5);
         special_tokens.insert("<assistant>".to_string(), 6);
+        // Advanced chat format tokens
+        special_tokens.insert("</s>".to_string(), 7);
+        special_tokens.insert("<|im_start|>".to_string(), 8);
+        special_tokens.insert("<|system|>".to_string(), 9);
         
         Self {
             vocab_size: 1_000_000, // BPEmb multilingual vocab
