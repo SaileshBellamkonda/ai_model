@@ -41,7 +41,7 @@ pub struct SimilarityRequest {
     /// Second text
     pub text2: String,
     /// Similarity metric to use
-    pub similarity_metric: SimilarityMetric,
+    pub metric: SimilarityMetric,
 }
 
 /// Similarity calculation response

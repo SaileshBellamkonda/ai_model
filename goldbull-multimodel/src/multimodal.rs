@@ -1,19 +1,13 @@
-// Placeholder multimodal module
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// Multimodal processing request
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultimodalRequest {
-    /// Text input (optional)
-    pub text: Option<String>,
-    /// Image data (optional)
-    pub image_data: Option<Vec<u8>>,
-    /// Audio data (optional)
-    pub audio_data: Option<Vec<u8>>,
-    /// Modalities to process
-    pub modalities: Vec<ModalityType>,
+    /// List of input modalities
+    pub inputs: Vec<ModalityInput>,
+    /// Output modalities to generate
+    pub output_modalities: Vec<ModalityType>,
     /// Processing options
     pub options: HashMap<String, String>,
 }
@@ -21,13 +15,31 @@ pub struct MultimodalRequest {
 impl Default for MultimodalRequest {
     fn default() -> Self {
         Self {
-            text: None,
-            image_data: None,
-            audio_data: None,
-            modalities: vec![ModalityType::Text],
+            inputs: Vec::new(),
+            output_modalities: vec![ModalityType::Text],
             options: HashMap::new(),
         }
     }
+}
+
+/// Input modality data
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModalityInput {
+    /// The modality type and data
+    pub modality: InputModality,
+    /// Metadata for this input
+    pub metadata: HashMap<String, String>,
+}
+
+/// Input modality types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum InputModality {
+    /// Text input
+    Text { content: String },
+    /// Image input
+    Image { data: Vec<u8> },
+    /// Audio input
+    Audio { data: Vec<f32>, sample_rate: u32 },
 }
 
 /// Multimodal processing response
@@ -35,10 +47,10 @@ impl Default for MultimodalRequest {
 pub struct MultimodalResponse {
     /// Text output (optional)
     pub text_output: Option<String>,
-    /// Image output (optional)
+    /// Image output (optional)  
     pub image_output: Option<Vec<u8>>,
     /// Audio output (optional)
-    pub audio_output: Option<Vec<u8>>,
+    pub audio_output: Option<Vec<f32>>,
     /// Overall confidence score
     pub confidence: f64,
     /// Processing metadata

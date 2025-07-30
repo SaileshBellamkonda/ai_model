@@ -68,8 +68,8 @@ pub struct AnswerDecoder {
 /// Transformer layer for sequence processing
 #[derive(Debug)]
 pub struct TransformerLayer {
-    self_attention: candle_nn::MultiHeadAttention,
-    feed_forward: candle_nn::Linear,
+    self_attention: MultiHeadAttention,
+    feed_forward: FeedForward,
     norm1: candle_nn::LayerNorm,
     norm2: candle_nn::LayerNorm,
 }
@@ -306,15 +306,13 @@ impl AnswerDecoder {
 
 impl TransformerLayer {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        // Note: This is a simplified implementation
-        // Real implementation would use proper multi-head attention
-        let self_attention = linear(config.hidden_size, config.hidden_size, var_builder.pp("attention"))?;
-        let feed_forward = linear(config.hidden_size, config.hidden_size, var_builder.pp("feed_forward"))?;
+        let self_attention = MultiHeadAttention::new(config, var_builder.pp("self_attention"))?;
+        let feed_forward = FeedForward::new(config, var_builder.pp("feed_forward"))?;
         let norm1 = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm1"))?;
         let norm2 = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm2"))?;
         
         Ok(Self {
-            self_attention: self_attention,
+            self_attention,
             feed_forward,
             norm1,
             norm2,
@@ -322,14 +320,107 @@ impl TransformerLayer {
     }
     
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
-        // Simplified transformer layer
+        // Self-attention with residual connection
         let normed = self.norm1.forward(input)?;
-        let attended = self.self_attention.forward(&normed)?;
+        let attended = self.self_attention.forward(&normed, &normed, &normed)?;
         let residual = input.add(&attended)?;
         
+        // Feed-forward with residual connection
         let normed2 = self.norm2.forward(&residual)?;
         let ff_out = self.feed_forward.forward(&normed2)?;
         
         Ok(residual.add(&ff_out)?)
+    }
+}
+
+/// Multi-head attention mechanism for question answering
+#[derive(Debug)]
+pub struct MultiHeadAttention {
+    query_proj: candle_nn::Linear,
+    key_proj: candle_nn::Linear,
+    value_proj: candle_nn::Linear,
+    output_proj: candle_nn::Linear,
+    num_heads: usize,
+    head_dim: usize,
+}
+
+impl MultiHeadAttention {
+    fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
+        let num_heads = config.num_attention_heads;
+        let head_dim = config.hidden_size / num_heads;
+        
+        let query_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("query"))?;
+        let key_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("key"))?;
+        let value_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("value"))?;
+        let output_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("output"))?;
+        
+        Ok(Self {
+            query_proj,
+            key_proj,
+            value_proj,
+            output_proj,
+            num_heads,
+            head_dim,
+        })
+    }
+    
+    fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
+        let (batch_size, seq_len, _) = query.dims3()?;
+        
+        // Project to Q, K, V
+        let q = self.query_proj.forward(query)?;
+        let k = self.key_proj.forward(key)?;
+        let v = self.value_proj.forward(value)?;
+        
+        // Reshape for multi-head attention
+        let q = q.reshape((batch_size, seq_len, self.num_heads, self.head_dim))?
+            .transpose(1, 2)?;
+        let k = k.reshape((batch_size, key.dim(1)?, self.num_heads, self.head_dim))?
+            .transpose(1, 2)?;
+        let v = v.reshape((batch_size, value.dim(1)?, self.num_heads, self.head_dim))?
+            .transpose(1, 2)?;
+        
+        // Scaled dot-product attention
+        let scale = 1.0 / (self.head_dim as f32).sqrt();
+        let scores = q.matmul(&k.transpose(2, 3)?)?
+            .mul(&Tensor::from_slice(&[scale], (), query.device())?)?;
+        
+        let attn_weights = candle_nn::ops::softmax(&scores, 3)?;
+        let attn_output = attn_weights.matmul(&v)?;
+        
+        // Reshape back
+        let attn_output = attn_output.transpose(1, 2)?
+            .reshape((batch_size, seq_len, self.num_heads * self.head_dim))?;
+        
+        // Final projection
+        self.output_proj.forward(&attn_output)
+    }
+}
+
+/// Feed-forward network for transformer layers
+#[derive(Debug)]
+pub struct FeedForward {
+    linear1: candle_nn::Linear,
+    linear2: candle_nn::Linear,
+    dropout: f32,
+}
+
+impl FeedForward {
+    fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
+        let intermediate_size = config.hidden_size * 4;
+        let linear1 = linear(config.hidden_size, intermediate_size, var_builder.pp("linear1"))?;
+        let linear2 = linear(intermediate_size, config.hidden_size, var_builder.pp("linear2"))?;
+        
+        Ok(Self {
+            linear1,
+            linear2,
+            dropout: 0.1,
+        })
+    }
+    
+    fn forward(&self, input: &Tensor) -> Result<Tensor> {
+        let hidden = self.linear1.forward(input)?;
+        let activated = hidden.gelu()?;
+        self.linear2.forward(&activated)
     }
 }
