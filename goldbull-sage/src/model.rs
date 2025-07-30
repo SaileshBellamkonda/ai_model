@@ -28,7 +28,7 @@
  */
 
 use anyhow::Result;
-use candle_core::{Device, Tensor, Module};
+use candle_core::{Device, Tensor, Module, IndexOp};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
@@ -336,7 +336,7 @@ impl GoldbullSage {
             generated_tokens.push(token_id);
         }
         
-        self.tokenizer.decode(&generated_tokens)
+        Ok(self.tokenizer.decode(&generated_tokens)?)
     }
     
     /// Production-grade token sampling with multiple sophisticated strategies

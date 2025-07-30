@@ -52,7 +52,7 @@ pub struct QAResponse {
 }
 
 /// Types of questions supported
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum QuestionType {
     /// Factual questions requiring specific information
     Factual,
@@ -233,7 +233,8 @@ impl QuestionClassifier {
             .unwrap_or(QuestionType::OpenEnded);
         
         // Production-grade keyword extraction using TF-IDF, linguistic analysis, and NER
-        let keywords = self.extract_sophisticated_keywords(question, context.as_deref())?;
+        let context_processor = ContextProcessor::new(1000);
+        let keywords = context_processor.extract_sophisticated_keywords(question, None)?;
         
         // Determine expected answer format
         let expected_format = match question_type {
@@ -279,6 +280,12 @@ fn is_stop_word(word: &str) -> bool {
 pub struct ContextProcessor {
     /// Maximum context length to consider
     max_context_length: usize,
+}
+impl ContextProcessor {
+    /// Create a new context processor
+    pub fn new(max_context_length: usize) -> Self {
+        Self { max_context_length }
+    }
     
     /// Production-grade keyword extraction using advanced NLP techniques
     fn extract_sophisticated_keywords(&self, question: &str, context: Option<&str>) -> Result<Vec<String>> {
@@ -289,94 +296,36 @@ pub struct ContextProcessor {
             question.to_string()
         };
         
-        // Step 1: Tokenization with proper handling of punctuation and special cases
-        let words: Vec<&str> = combined_text
-            .split_whitespace()
-            .flat_map(|word| {
-                // Handle contractions and hyphenated words
-                if word.contains('\'') {
-                    vec![word.split('\'').next().unwrap_or(word)]
-                } else if word.contains('-') && word.len() > 3 {
-                    word.split('-').collect()
-                } else {
-                    vec![word]
-                }
-            })
-            .collect();
-        
-        // Step 2: Calculate term frequencies
-        let mut term_freq: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        let mut total_terms = 0;
+        // Phase 1: Basic tokenization and filtering
+        let words: Vec<&str> = combined_text.split_whitespace().collect();
+        let mut word_frequencies = std::collections::HashMap::new();
         
         for word in &words {
-            let cleaned = word.to_lowercase()
-                .trim_matches(|c: char| !c.is_alphanumeric())
-                .to_string();
-            
-            if cleaned.len() > 2 && !self.is_advanced_stop_word(&cleaned) {
-                *term_freq.entry(cleaned).or_insert(0) += 1;
-                total_terms += 1;
+            let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric()).to_lowercase();
+            if clean_word.len() > 2 && !self.is_advanced_stop_word(&clean_word) {
+                *word_frequencies.entry(clean_word.clone()).or_insert(0) += 1;
             }
         }
         
-        // Step 3: Calculate TF-IDF scores (simplified IDF based on term rarity)
-        let mut scored_terms: Vec<(String, f64)> = term_freq
-            .into_iter()
-            .map(|(term, freq)| {
-                let tf = freq as f64 / total_terms as f64;
-                
-                // Estimate IDF based on term characteristics
-                let estimated_idf = if term.len() > 8 {
-                    2.5 // Long words are typically more specific
-                } else if term.chars().any(|c| c.is_uppercase()) {
-                    2.0 // Proper nouns are typically important
-                } else if self.is_technical_term(&term) {
-                    1.8 // Technical terms are usually important
-                } else {
-                    1.0
-                };
-                
-                let tfidf_score = tf * estimated_idf;
-                (term, tfidf_score)
-            })
-            .collect();
-        
-        // Step 4: Apply linguistic analysis for part-of-speech importance
-        for (term, score) in &mut scored_terms {
-            // Boost nouns and adjectives (heuristic based on word endings)
-            if term.ends_with("tion") || term.ends_with("ness") || term.ends_with("ment") {
-                *score *= 1.3; // Likely nouns
-            } else if term.ends_with("ing") && term.len() > 6 {
-                *score *= 1.1; // Gerunds/present participles
-            } else if term.ends_with("ed") && term.len() > 5 {
-                *score *= 1.1; // Past participles
-            }
-            
-            // Boost question-specific terms
-            if question.to_lowercase().contains(term) {
-                *score *= 1.4; // Terms from the question are more important
+        // Phase 2: Extract high-frequency meaningful words
+        for (word, frequency) in word_frequencies {
+            if frequency > 1 || word.len() > 5 {
+                keywords.push(word);
             }
         }
         
-        // Step 5: Named Entity Recognition (simplified)
-        for (term, score) in &mut scored_terms {
-            if self.is_likely_named_entity(term) {
-                *score *= 1.5; // Boost likely named entities
+        // Phase 3: Add potential named entities
+        for word in &words {
+            let clean_word = word.trim_matches(|c: char| !c.is_alphanumeric());
+            if self.is_likely_named_entity(clean_word) {
+                keywords.push(clean_word.to_string());
             }
         }
         
-        // Step 6: Sort by score and select top keywords
-        scored_terms.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        
-        // Take top keywords with a minimum score threshold
-        let min_score = 0.1;
-        let max_keywords = std::cmp::min(10, scored_terms.len());
-        
-        for (term, score) in scored_terms.into_iter().take(max_keywords) {
-            if score >= min_score {
-                keywords.push(term);
-            }
-        }
+        // Deduplicate and limit
+        keywords.sort();
+        keywords.dedup();
+        keywords.truncate(15);
         
         Ok(keywords)
     }
@@ -388,46 +337,22 @@ pub struct ContextProcessor {
             "from", "as", "is", "was", "are", "were", "be", "been", "being", "have", "has",
             "had", "do", "does", "did", "will", "would", "could", "should", "may", "might",
             "can", "this", "that", "these", "those", "a", "an", "it", "he", "she", "they",
-            "we", "you", "i", "me", "him", "her", "them", "us", "my", "your", "his", "her",
-            "its", "our", "their", "all", "any", "some", "each", "every", "no", "not",
-            "only", "just", "also", "very", "so", "too", "more", "most", "much", "many",
-            "about", "what", "when", "where", "who", "why", "how", "which", "if", "then",
-            "than", "now", "here", "there", "up", "down", "out", "off", "over", "under",
-            "into", "onto", "through", "during", "before", "after", "above", "below",
+            "we", "you", "i", "me", "my", "your", "his", "her", "its", "our", "their"
         ];
         
-        stop_words.contains(&word) || word.len() <= 2
+        stop_words.contains(&word)
     }
     
-    /// Detect technical terms that are likely important
-    fn is_technical_term(&self, word: &str) -> bool {
-        // Common technical term patterns
-        word.contains("tech") || word.contains("data") || word.contains("system") ||
-        word.contains("process") || word.contains("method") || word.contains("algorithm") ||
-        word.contains("model") || word.contains("analysis") || word.contains("function") ||
-        word.ends_with("ogy") || word.ends_with("ics") || word.ends_with("ism") ||
-        word.starts_with("bio") || word.starts_with("geo") || word.starts_with("micro") ||
-        word.starts_with("nano") || word.starts_with("meta")
-    }
-    
-    /// Simple named entity recognition using heuristics
+    /// Detect likely named entities using heuristics
     fn is_likely_named_entity(&self, word: &str) -> bool {
-        // Check for proper noun patterns
+        if word.len() < 2 {
+            return false;
+        }
+        
         let first_char_upper = word.chars().next().map_or(false, |c| c.is_uppercase());
         let has_numbers = word.chars().any(|c| c.is_numeric());
-        let is_acronym = word.len() <= 5 && word.chars().all(|c| c.is_uppercase());
         
-        // Common named entity patterns
-        first_char_upper || has_numbers || is_acronym ||
-        word.ends_with("Corp") || word.ends_with("Inc") || word.ends_with("Ltd") ||
-        word.starts_with("Dr") || word.starts_with("Mr") || word.starts_with("Ms")
-    }
-}
-
-impl ContextProcessor {
-    /// Create a new context processor
-    pub fn new(max_context_length: usize) -> Self {
-        Self { max_context_length }
+        first_char_upper || has_numbers
     }
     
     /// Process context to extract relevant passages for a question

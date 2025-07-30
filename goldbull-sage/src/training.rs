@@ -118,7 +118,7 @@ impl QADataset {
         let lines: Vec<&str> = content.lines().collect();
         
         // Production-grade QA pair generation with sophisticated text analysis
-        let qa_pairs = self.generate_sophisticated_qa_pairs(&content)?;
+        let qa_pairs = Self::generate_sophisticated_qa_pairs_static(&content)?;
         
         for qa_pair in qa_pairs {
             samples.push(qa_pair);
@@ -153,7 +153,7 @@ impl QADataset {
     }
     
     /// Production-grade QA pair generation using advanced text analysis
-    fn generate_sophisticated_qa_pairs(&self, content: &str) -> Result<Vec<QASample>> {
+    fn generate_sophisticated_qa_pairs_static(content: &str) -> Result<Vec<QASample>> {
         let mut qa_pairs = Vec::new();
         
         // Step 1: Intelligent text segmentation
@@ -319,7 +319,7 @@ impl QADataset {
         
         for word in &words {
             let cleaned = word.to_lowercase().trim_matches(|c: char| !c.is_alphanumeric()).to_string();
-            if cleaned.len() > 4 && !self.is_stop_word(&cleaned) {
+            if cleaned.len() > 4 && !Self::is_stop_word(&cleaned) {
                 *word_freq.entry(cleaned).or_insert(0) += 1;
             }
         }
@@ -331,7 +331,7 @@ impl QADataset {
             .collect()
     }
     
-    fn is_stop_word(&self, word: &str) -> bool {
+    fn is_stop_word(word: &str) -> bool {
         let stop_words = ["the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
         stop_words.contains(&word)
     }
@@ -721,7 +721,7 @@ impl Trainer {
     fn evaluate_factual_answer(&self, predicted: &str, expected: &str) -> f64 {
         // For factual answers, check if key facts are present
         let expected_facts: Vec<&str> = expected.split_whitespace()
-            .filter(|word| word.len() > 3 && !self.is_stop_word(word))
+            .filter(|word| word.len() > 3 && !Self::is_stop_word(word))
             .collect();
         
         let predicted_words: std::collections::HashSet<&str> = predicted.split_whitespace().collect();
@@ -766,7 +766,7 @@ impl Trainer {
     fn evaluate_summary_answer(&self, predicted: &str, expected: &str) -> f64 {
         // For summaries, focus on key concept coverage rather than exact wording
         let key_concepts_expected: Vec<&str> = expected.split_whitespace()
-            .filter(|word| word.len() > 4 && !self.is_stop_word(word))
+            .filter(|word| word.len() > 4 && !Self::is_stop_word(word))
             .collect();
         
         let predicted_words: std::collections::HashSet<&str> = predicted.split_whitespace().collect();
@@ -791,7 +791,6 @@ impl Trainer {
             }
         }
         None
-    }
     }
 }
 
