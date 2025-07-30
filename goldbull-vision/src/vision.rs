@@ -297,21 +297,100 @@ impl ImagePreprocessor {
     
     /// Check if augmentation should be applied with sophisticated heuristics
     fn should_apply_augmentation(&self) -> bool {
-        // Production-grade augmentation decision based on multiple factors:
+        // Production-grade augmentation decision based on multiple factors
         
-        // 1. Training vs inference mode detection (simplified)
-        let is_training_mode = true; // In production, this would be determined by model state
+        // 1. Training vs inference mode detection using environment variables and process state
+        let is_training_mode = std::env::var("MODEL_MODE")
+            .map(|m| m.to_lowercase() == "training" || m.to_lowercase() == "train")
+            .unwrap_or_else(|_| {
+                // Fallback: detect training mode from process arguments or model state
+                std::env::args().any(|arg| arg.contains("train")) ||
+                std::env::var("CUDA_VISIBLE_DEVICES").is_ok() // Training often uses GPU isolation
+            });
         
-        // 2. Image characteristics-based decision
-        // Would analyze image properties like contrast, brightness, noise level
+        // 2. Dynamic augmentation probability based on training stage
+        let training_progress = std::env::var("TRAINING_EPOCH")
+            .ok()
+            .and_then(|e| e.parse::<f32>().ok())
+            .unwrap_or(0.0);
         
-        // 3. Task-specific augmentation policies
-        // Different augmentation strategies for different vision tasks
+        // Reduce augmentation intensity as training progresses (curriculum learning)
+        let base_aug_prob = if training_progress < 10.0 { 0.8 } 
+                           else if training_progress < 50.0 { 0.6 }
+                           else { 0.4 };
         
-        // 4. Augmentation schedule (progressive augmentation)
-        // Could implement curriculum learning with increasing augmentation complexity
+        // 3. Adaptive augmentation based on system resources
+        let memory_pressure = self.get_memory_pressure();
+        let aug_prob = if memory_pressure > 0.8 { base_aug_prob * 0.5 } // Reduce augmentation under memory pressure
+                      else if memory_pressure < 0.3 { base_aug_prob * 1.2 } // Increase when resources available
+                      else { base_aug_prob };
         
-        is_training_mode // For now, apply during training
+        // 4. Task-specific policies based on image characteristics
+        let num_classes = std::env::var("MODEL_NUM_CLASSES")
+            .ok()
+            .and_then(|n| n.parse::<u32>().ok())
+            .unwrap_or(1000); // Default to ImageNet size
+            
+        let task_specific_factor = if num_classes <= 10 { 1.1 } // Small classification tasks benefit from more augmentation
+                                  else if num_classes > 1000 { 0.8 } // Large classification may need less aggressive augmentation
+                                  else { 1.0 };
+        
+        let final_aug_prob = (aug_prob * task_specific_factor as f32).min(0.95f32).max(0.1f32);
+        
+        // 5. Deterministic decision with sophisticated pseudo-randomness
+        let decision_seed = (training_progress as u64).wrapping_mul(7919) 
+                           .wrapping_add(num_classes as u64 * 31);
+        let pseudo_random = ((decision_seed.wrapping_mul(1103515245).wrapping_add(12345)) >> 16) as f32 / 65536.0;
+        
+        is_training_mode && pseudo_random < final_aug_prob
+    }
+    
+    /// Get system memory pressure as a factor between 0.0 and 1.0
+    fn get_memory_pressure(&self) -> f32 {
+        use std::fs;
+        
+        // Try to read memory information from /proc/meminfo on Linux
+        if let Ok(meminfo) = fs::read_to_string("/proc/meminfo") {
+            let mut total_mem = 0u64;
+            let mut available_mem = 0u64;
+            
+            for line in meminfo.lines() {
+                if line.starts_with("MemTotal:") {
+                    total_mem = line.split_whitespace()
+                        .nth(1)
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0);
+                } else if line.starts_with("MemAvailable:") {
+                    available_mem = line.split_whitespace()
+                        .nth(1)
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0);
+                }
+            }
+            
+            if total_mem > 0 && available_mem > 0 {
+                let used_ratio = 1.0 - (available_mem as f32 / total_mem as f32);
+                return used_ratio.min(1.0).max(0.0);
+            }
+        }
+        
+        // Fallback: estimate based on process memory usage
+        #[cfg(target_os = "linux")]
+        {
+            if let Ok(status) = fs::read_to_string("/proc/self/status") {
+                for line in status.lines() {
+                    if line.starts_with("VmRSS:") {
+                        if let Some(rss) = line.split_whitespace().nth(1).and_then(|s| s.parse::<u64>().ok()) {
+                            // Assume moderate memory pressure if process uses more than 1GB
+                            return ((rss as f32 / 1024.0) / 2048.0).min(1.0);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Conservative fallback
+        0.3
     }
     
     /// Apply sophisticated data augmentation techniques for enhanced robustness
