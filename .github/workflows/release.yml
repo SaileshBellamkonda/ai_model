@@ -1,0 +1,164 @@
+name: Release Build
+
+on:
+  release:
+    types: [created]
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Release ${{ matrix.target }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: goldbull-linux-amd64
+            
+          # Linux ARM64  
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: goldbull-linux-arm64
+            
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: goldbull-windows-amd64
+            
+          # Windows ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: goldbull-windows-arm64
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Install cross-compilation dependencies (Linux ARM64)
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: Build core libraries
+      run: |
+        cargo build --release --target ${{ matrix.target }} --package goldbull-core
+        cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
+
+    - name: Build goldbull-text binary
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
+      continue-on-error: true
+
+    - name: Build goldbull-code binary
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
+      continue-on-error: true
+
+    - name: Create release directory
+      shell: bash
+      run: |
+        mkdir -p release/${{ matrix.artifact_name }}
+        
+    - name: Copy binaries and create archive (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        # Copy binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-cli" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code" release/${{ matrix.artifact_name }}/
+        fi
+        
+        # Copy README and LICENSE if they exist
+        if [ -f "README.md" ]; then
+          cp README.md release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "LICENSE" ]; then
+          cp LICENSE release/${{ matrix.artifact_name }}/
+        fi
+        
+        # Create tar archive
+        cd release
+        tar -czf ${{ matrix.artifact_name }}.tar.gz ${{ matrix.artifact_name }}/
+        
+    - name: Copy binaries and create archive (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        # Copy binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-cli.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code.exe" release/${{ matrix.artifact_name }}/
+        fi
+        
+        # Copy README and LICENSE if they exist
+        if [ -f "README.md" ]; then
+          cp README.md release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "LICENSE" ]; then
+          cp LICENSE release/${{ matrix.artifact_name }}/
+        fi
+        
+        # Create zip archive
+        cd release
+        7z a ${{ matrix.artifact_name }}.zip ${{ matrix.artifact_name }}/
+
+    - name: Upload release asset (Unix)
+      if: runner.os != 'Windows' && github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./release/${{ matrix.artifact_name }}.tar.gz
+        asset_name: ${{ matrix.artifact_name }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload release asset (Windows)
+      if: runner.os == 'Windows' && github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./release/${{ matrix.artifact_name }}.zip
+        asset_name: ${{ matrix.artifact_name }}.zip
+        asset_content_type: application/zip
+
+    - name: Upload build artifacts (Unix)
+      if: runner.os != 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}-release
+        path: release/${{ matrix.artifact_name }}.tar.gz
+        retention-days: 90
+
+    - name: Upload build artifacts (Windows)
+      if: runner.os == 'Windows'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}-release
+        path: release/${{ matrix.artifact_name }}.zip
+        retention-days: 90
