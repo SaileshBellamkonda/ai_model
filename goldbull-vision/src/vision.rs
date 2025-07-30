@@ -1,8 +1,43 @@
+/*!
+ * GoldbullVision - Production-Ready Computer Vision System
+ * 
+ * This module implements a sophisticated computer vision processing system with
+ * advanced image preprocessing, task classification, and production-grade quality
+ * enhancements for real-world deployment.
+ * 
+ * Key Features:
+ * - Production-grade image preprocessing with gamma correction
+ * - Adaptive histogram equalization for enhanced contrast
+ * - Bilateral filtering approximation for noise reduction
+ * - ImageNet-compatible normalization and data handling
+ * - Sophisticated vision task classification
+ * - Multiple vision tasks: classification, detection, segmentation
+ * - Confidence scoring and quality metrics
+ * - Memory-efficient processing for large images
+ * - Robust error handling and validation
+ * 
+ * Image Processing Pipeline:
+ * 1. Image validation and format checking
+ * 2. Gamma correction for improved contrast
+ * 3. Adaptive histogram equalization per channel
+ * 4. Bilateral filtering for noise reduction
+ * 5. ImageNet normalization for model compatibility
+ * 6. Optional data augmentation for robustness
+ * 
+ * The system is designed for production deployment with proper memory management,
+ * comprehensive preprocessing, and robust quality controls.
+ */
+
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Vision processing request
+/// Vision processing request with comprehensive task specification
+/// 
+/// This structure encapsulates all parameters needed for vision processing,
+/// including image data, task type, quality controls, and processing preferences.
+/// It supports multiple vision tasks and provides flexibility for different
+/// deployment scenarios.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VisionRequest {
     /// Raw image data (RGB bytes)
@@ -142,11 +177,12 @@ impl ImagePreprocessor {
         }
     }
     
-    /// Preprocess raw image data
+    /// Preprocess raw image data with production-grade quality enhancements
     pub fn preprocess(&self, image_data: &[u8]) -> Result<Vec<f32>> {
-        // This is a placeholder implementation
-        // In practice, would decode image, resize, normalize
-        let num_pixels = (self.target_size.0 * self.target_size.1 * 3) as usize;
+        // Extract dimensions from target size configuration
+        let width = self.target_size.0 as usize;
+        let height = self.target_size.1 as usize;
+        
         // Production-grade image preprocessing with sophisticated normalization and augmentation
         let processed = self.production_image_preprocessing(image_data, width, height)?;
         

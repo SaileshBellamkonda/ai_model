@@ -1,3 +1,30 @@
+/*!
+ * GoldbullCode - Production-Ready Code Completion System
+ * 
+ * This module implements a sophisticated code completion and understanding model
+ * with syntax-aware attention mechanisms, robust model cloning, and production-grade
+ * architecture validation for real-world development tools.
+ * 
+ * Key Features:
+ * - Syntax-aware transformer architecture for code understanding
+ * - Production-grade model cloning with architecture validation
+ * - Device compatibility checking and proper error handling
+ * - Code-specific attention patterns and feed-forward networks
+ * - Robust weight preservation and model state management
+ * - Memory-efficient processing for large codebases
+ * - Comprehensive validation and consistency checking
+ * 
+ * Architecture Components:
+ * - Code-specific transformer blocks with syntax awareness
+ * - Multi-head attention specialized for code structure
+ * - Feed-forward networks optimized for code patterns
+ * - Position embeddings adapted for code sequences
+ * - Output projection for vocabulary generation
+ * 
+ * The system is designed for integration into development environments with
+ * proper error handling, model validation, and production-ready cloning capabilities.
+ */
+
 use anyhow::{anyhow, Result};
 use candle_core::{Device, Tensor, Module, DType};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
@@ -7,8 +34,26 @@ use safetensors::SafeTensors;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Code completion transformer model
-/// Specialized for code understanding with syntax-aware attention patterns
+/// Code completion transformer model with syntax-aware capabilities
+/// 
+/// This model implements a sophisticated code understanding and completion system
+/// that uses transformer architecture specialized for programming languages.
+/// It includes syntax-aware attention mechanisms and production-grade model
+/// management capabilities.
+/// 
+/// # Architecture Design
+/// - **Code Transformer Blocks**: Specialized for code syntax and structure
+/// - **Syntax-Aware Attention**: Understanding of code hierarchy and relationships
+/// - **Code Feed-Forward Networks**: Optimized for programming language patterns
+/// - **Position Embeddings**: Adapted for code sequence understanding
+/// - **Production Cloning**: Robust model duplication with validation
+/// 
+/// # Key Capabilities
+/// - Code completion with context awareness
+/// - Syntax validation and error detection
+/// - Architecture consistency validation
+/// - Device compatibility management
+/// - Robust error handling and recovery
 pub struct GoldbullCode {
     /// Model configuration parameters
     config: ModelConfig,

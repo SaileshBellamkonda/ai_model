@@ -1,3 +1,28 @@
+/*!
+ * GoldbullMultimodel - Production-Ready Multimodal AI System
+ * 
+ * This module implements a sophisticated multimodal transformer that can process
+ * and generate content across text, vision, and audio modalities. The system uses
+ * advanced cross-modal attention, fusion mechanisms, and production-grade processing.
+ * 
+ * Key Features:
+ * - Cross-modal attention and fusion mechanisms
+ * - Production-grade image preprocessing with ImageNet normalization
+ * - Advanced text processing with BPE tokenization
+ * - Audio feature encoding and processing
+ * - Nucleus sampling with top-k filtering for generation
+ * - VAE-style latent space sampling for image generation
+ * - Comprehensive error handling and validation
+ * - Memory-efficient tensor operations
+ * 
+ * Architecture Components:
+ * - Separate encoders for each modality (text, vision, audio)
+ * - Cross-modal fusion layer with attention-based weighting
+ * - Multimodal decoder for unified generation
+ * - Modality-specific output projections
+ * - Advanced sampling and generation strategies
+ */
+
 use anyhow::Result;
 use candle_core::{Device, Tensor, Module};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
@@ -5,8 +30,26 @@ use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use crate::multimodal::{MultimodalRequest, MultimodalResponse, ModalityType, InputModality, ModalityInput};
 
-/// Multimodal AI transformer model
-/// Combines text, vision, and audio processing capabilities
+/// Multimodal AI transformer model with cross-modal capabilities
+/// 
+/// This model represents a sophisticated multimodal system that can understand
+/// and generate content across different modalities (text, vision, audio).
+/// It uses transformer architecture with specialized cross-modal attention
+/// mechanisms for effective multimodal fusion.
+/// 
+/// # Architecture Design
+/// - **Text Encoder**: Transformer-based text understanding with BPE tokenization
+/// - **Vision Encoder**: CNN-based image processing with progressive architecture  
+/// - **Audio Encoder**: Spectral feature processing for audio understanding
+/// - **Cross-Modal Fusion**: Advanced attention-based fusion with gated mechanisms
+/// - **Multimodal Decoder**: Unified generation across all modalities
+/// 
+/// # Processing Pipeline
+/// 1. Modality-specific encoding (text/vision/audio)
+/// 2. Cross-modal attention and interaction
+/// 3. Fusion with learned importance weighting
+/// 4. Unified multimodal representation
+/// 5. Modality-specific generation and output
 pub struct GoldbullMultimodel {
     /// Model configuration parameters
     config: ModelConfig,

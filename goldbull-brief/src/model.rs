@@ -1,3 +1,22 @@
+/*!
+ * GoldbullBrief - Production-Ready Text Summarization Model
+ * 
+ * This module implements a sophisticated transformer-based text summarization system
+ * with both extractive and abstractive capabilities. The model uses advanced attention
+ * mechanisms, semantic similarity scoring, and production-grade text processing.
+ * 
+ * Key Features:
+ * - Multi-head transformer architecture with cross-attention
+ * - Extractive summarization with sentence importance scoring
+ * - Abstractive summarization with controlled generation
+ * - Sophisticated sentence tokenization and boundary detection
+ * - Confidence scoring and quality metrics
+ * - Production-ready error handling and validation
+ * 
+ * The model is designed for real-world deployment with proper memory management,
+ * robust preprocessing, and comprehensive evaluation metrics.
+ */
+
 use anyhow::Result;
 use candle_core::{Device, Tensor, Module};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
@@ -5,8 +24,24 @@ use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use crate::summarization::{SummarizationRequest, SummarizationResponse, SummaryType, SummaryStyle};
 
-/// Text summarization transformer model
-/// Specialized for extractive and abstractive text summarization
+/// Text summarization transformer model with production-ready capabilities
+/// 
+/// This model implements a sophisticated text summarization system that combines
+/// extractive and abstractive approaches. It uses transformer architecture with
+/// specialized attention mechanisms for understanding text structure and importance.
+/// 
+/// # Architecture
+/// - Token embeddings with positional encoding
+/// - Multi-layer transformer encoder for text understanding
+/// - Specialized summary decoder with attention mechanisms
+/// - Importance scoring system for extractive summarization
+/// - Controlled generation system for abstractive summarization
+/// 
+/// # Performance Characteristics
+/// - Memory-efficient processing for long documents
+/// - CPU-optimized tensor operations
+/// - Configurable output length and style
+/// - Real-time processing capabilities for moderate-sized texts
 pub struct GoldbullBrief {
     /// Model configuration parameters
     config: ModelConfig,

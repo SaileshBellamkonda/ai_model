@@ -1,3 +1,32 @@
+/*!
+ * GoldbullSage - Production-Ready Question Answering System
+ * 
+ * This module implements a sophisticated question answering model using transformer
+ * architecture with advanced cross-attention mechanisms, semantic similarity analysis,
+ * and production-grade text processing capabilities.
+ * 
+ * Key Features:
+ * - Cross-attention between questions and contexts
+ * - Multi-strategy token sampling with nucleus and top-k
+ * - Sophisticated answer evaluation with semantic similarity
+ * - Advanced training data generation from text corpora
+ * - Comprehensive question type classification and handling
+ * - Production-ready error handling and validation
+ * - Memory-efficient processing for long contexts
+ * 
+ * Question Types Supported:
+ * - Factual questions requiring specific information
+ * - Analytical questions requiring reasoning
+ * - Yes/No questions with confidence scoring
+ * - Multiple choice with option extraction
+ * - Open-ended questions with contextual answers
+ * - Definition questions with terminology focus
+ * - Summarization questions with key concept extraction
+ * 
+ * The system is designed for real-world deployment with robust preprocessing,
+ * comprehensive evaluation metrics, and sophisticated answer generation.
+ */
+
 use anyhow::Result;
 use candle_core::{Device, Tensor, Module};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
@@ -6,8 +35,26 @@ use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use serde::{Deserialize, Serialize};
 use crate::qa::{QARequest, QAResponse, QuestionType};
 
-/// Question Answering transformer model
-/// Specialized for reading comprehension and factual question answering
+/// Question Answering transformer model with advanced reasoning capabilities
+/// 
+/// This model implements a sophisticated QA system that can understand complex
+/// questions and generate accurate answers by reasoning over provided context.
+/// It uses transformer architecture with specialized attention mechanisms for
+/// question-context interaction and sophisticated answer generation.
+/// 
+/// # Architecture Components
+/// - **Question Encoder**: Specialized transformer for question understanding
+/// - **Context Encoder**: Document processing with importance weighting
+/// - **Cross-Attention**: Bi-directional attention between question and context
+/// - **Answer Decoder**: Controlled generation with multiple sampling strategies
+/// - **Fusion Mechanisms**: Gated fusion for question-context integration
+/// 
+/// # Processing Pipeline
+/// 1. Question and context tokenization and encoding
+/// 2. Cross-attention computation for relevance detection
+/// 3. Gated fusion of question and context representations
+/// 4. Answer generation with confidence scoring
+/// 5. Post-processing and quality evaluation
 pub struct GoldbullSage {
     /// Model configuration parameters
     config: ModelConfig,
