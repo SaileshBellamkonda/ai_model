@@ -24,11 +24,11 @@
  */
 
 use anyhow::Result;
-use candle_core::{Device, Tensor, Module};
+use candle_core::{Device, Tensor, Module, IndexOp};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
-use crate::multimodal::{MultimodalRequest, MultimodalResponse, ModalityType, InputModality, ModalityInput};
+use crate::multimodal::{MultimodalRequest, MultimodalResponse, ModalityType, InputModality};
 
 /// Multimodal AI transformer model with cross-modal capabilities
 /// 
@@ -305,9 +305,10 @@ impl GoldbullMultimodel {
     /// Encode text input
     async fn encode_text(&self, text: &str) -> Result<Tensor> {
         let tokens = self.tokenizer.encode(text)?;
+        let tokens_len = tokens.len();
         let input_tensor = Tensor::from_vec(
             tokens,
-            (1, tokens.len()),
+            (1, tokens_len),
             &self.device,
         )?;
         
@@ -348,7 +349,7 @@ impl GoldbullMultimodel {
             generated_tokens.push(token_id);
         }
         
-        self.tokenizer.decode(&generated_tokens)
+        Ok(self.tokenizer.decode(&generated_tokens)?)
     }
     
     /// Generate image output description from fused representation
@@ -659,7 +660,7 @@ impl TextModalityEncoder {
         }
         
         hidden = self.norm.forward(&hidden)?;
-        self.projection.forward(&hidden.mean(1)?)
+        Ok(self.projection.forward(&hidden.mean(1)?)?)
     }
 }
 
@@ -686,7 +687,7 @@ impl VisionModalityEncoder {
         }
         
         hidden = self.norm.forward(&hidden)?;
-        self.projection.forward(&hidden.mean(1)?)
+        Ok(self.projection.forward(&hidden.mean(1)?)?)
     }
 }
 
@@ -713,7 +714,7 @@ impl AudioModalityEncoder {
         }
         
         hidden = self.norm.forward(&hidden)?;
-        self.projection.forward(&hidden.mean(1)?)
+        Ok(self.projection.forward(&hidden.mean(1)?)?)
     }
 }
 
@@ -900,6 +901,39 @@ impl CrossModalAttention {
         let output_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("output"))?;
         
         Ok(Self { query_proj, key_proj, value_proj, output_proj, num_heads })
+    }
+    
+    /// Forward pass for cross-modal attention
+    fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
+        let batch_size = query.dim(0)?;
+        let seq_len = query.dim(1)?;
+        let head_dim = query.dim(2)? / self.num_heads;
+        
+        // Reshape for multi-head attention
+        let q = query.reshape((batch_size, seq_len, self.num_heads, head_dim))?
+                     .transpose(1, 2)?;
+        let k = key.reshape((batch_size, seq_len, self.num_heads, head_dim))?
+                   .transpose(1, 2)?;
+        let v = value.reshape((batch_size, seq_len, self.num_heads, head_dim))?
+                     .transpose(1, 2)?;
+        
+        // Compute attention scores
+        let scores = q.matmul(&k.transpose(2, 3)?)?;
+        let scale = (head_dim as f64).sqrt();
+        let scores = scores.mul(&Tensor::new(1.0 / scale, query.device())?)?;
+        
+        // Apply softmax
+        let attention_weights = candle_nn::ops::softmax(&scores, 3)?;
+        
+        // Apply attention to values
+        let attended = attention_weights.matmul(&v)?;
+        
+        // Reshape back
+        let output = attended.transpose(1, 2)?
+                            .reshape((batch_size, seq_len, query.dim(2)?))?;
+        
+        // Final projection
+        Ok(self.output_proj.forward(&output)?)
     }
 }
 
