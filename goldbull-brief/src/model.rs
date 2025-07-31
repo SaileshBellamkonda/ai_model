@@ -18,7 +18,7 @@
  */
 
 use anyhow::Result;
-use candle_core::{Device, Tensor, Module};
+use candle_core::{Device, Tensor, Module, IndexOp};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
@@ -188,6 +188,12 @@ impl GoldbullBrief {
             SummaryType::Abstractive => {
                 self.abstractive_summarize(&encoded_input, &request).await?
             }
+            SummaryType::BulletPoints => {
+                self.bullet_point_summarize(&encoded_input, &input_tokens, &request).await?
+            }
+            SummaryType::Highlights => {
+                self.highlight_summarize(&encoded_input, &input_tokens, &request).await?
+            }
         };
         
         // Decode summary tokens to text
@@ -218,7 +224,7 @@ impl GoldbullBrief {
     /// Encode input text through the encoder
     fn encode_text(&self, input: &Tensor) -> Result<Tensor> {
         let embeddings = self.embeddings.forward(input)?;
-        self.text_encoder.forward(&embeddings)
+        Ok(self.text_encoder.forward(&embeddings)?)
     }
     
     /// Perform extractive summarization by selecting important sentences
@@ -293,7 +299,7 @@ impl GoldbullBrief {
             
             // Get logits for next token
             let next_token_logits = self.output_projection.forward(
-                &decoder_output.i((0, decoder_output.dim(1)? - 1, ..))?
+                &decoder_output.narrow(1, decoder_output.dim(1)? - 1, 1)?.squeeze(1)?
             )?;
             
             // Sample next token
@@ -308,6 +314,50 @@ impl GoldbullBrief {
         }
         
         Ok(summary_tokens)
+    }
+    
+    /// Generate bullet point summary
+    async fn bullet_point_summarize(
+        &self,
+        encoded_input: &Tensor,
+        input_tokens: &[u32],
+        request: &SummarizationRequest,
+    ) -> Result<Vec<u32>> {
+        // Extract key sentences and format as bullet points
+        let extractive_summary = self.extractive_summarize(encoded_input, input_tokens, request).await?;
+        
+        // Split into sentences for bullet formatting
+        let mut bullet_tokens = Vec::new();
+        
+        // Add bullet point prefix tokens
+        if let Ok(bullet_prefix) = self.tokenizer.encode("• ") {
+            bullet_tokens.extend_from_slice(&bullet_prefix);
+        }
+        
+        bullet_tokens.extend_from_slice(&extractive_summary);
+        Ok(bullet_tokens)
+    }
+    
+    /// Generate highlight summary
+    async fn highlight_summarize(
+        &self,
+        encoded_input: &Tensor,
+        input_tokens: &[u32],
+        request: &SummarizationRequest,
+    ) -> Result<Vec<u32>> {
+        // Extract the most important parts as highlights
+        let extractive_summary = self.extractive_summarize(encoded_input, input_tokens, request).await?;
+        
+        // Add highlight formatting
+        let mut highlight_tokens = Vec::new();
+        
+        // Add highlight prefix
+        if let Ok(highlight_prefix) = self.tokenizer.encode("HIGHLIGHTS: ") {
+            highlight_tokens.extend_from_slice(&highlight_prefix);
+        }
+        
+        highlight_tokens.extend_from_slice(&extractive_summary);
+        Ok(highlight_tokens)
     }
     
     /// Apply style-specific formatting to the summary
@@ -329,13 +379,21 @@ impl GoldbullBrief {
                     summary.to_string()
                 }
             }
-            SummaryStyle::Bullet => {
+            SummaryStyle::BulletPoints => {
                 // Convert to bullet points
                 let sentences: Vec<&str> = summary.split(". ").collect();
                 sentences.iter()
                     .map(|s| format!("• {}", s.trim_end_matches('.')))
                     .collect::<Vec<_>>()
                     .join("\n")
+            }
+            SummaryStyle::Formal => {
+                // Add formal phrasing
+                format!("The following is a comprehensive summary: {}", summary)
+            }
+            SummaryStyle::Casual => {
+                // Use casual language
+                format!("Here's what this is about: {}", summary)
             }
         }
     }
@@ -353,12 +411,12 @@ impl GoldbullBrief {
         let doc_repr = encoded_input.mean(1)?; // Shape: (batch_size, hidden_size)
         
         for i in 0..seq_len {
-            let token_repr = encoded_input.i((0, i, ..))?; // Shape: (hidden_size,)
+            let token_repr = encoded_input.narrow(1, i, 1)?.squeeze(1)?; // Shape: (hidden_size,)
             
             // Calculate semantic similarity score using cosine similarity
-            let dot_product = token_repr.mul(&doc_repr.i(0)?)?.sum_all()?.to_scalar::<f32>()?;
+            let dot_product = token_repr.mul(&doc_repr.get(0)?)?.sum_all()?.to_scalar::<f32>()?;
             let token_norm = token_repr.sqr()?.sum_all()?.sqrt()?.to_scalar::<f32>()?;
-            let doc_norm = doc_repr.i(0)?.sqr()?.sum_all()?.sqrt()?.to_scalar::<f32>()?;
+            let doc_norm = doc_repr.get(0)?.sqr()?.sum_all()?.sqrt()?.to_scalar::<f32>()?;
             
             let cosine_sim = if token_norm > 0.0 && doc_norm > 0.0 {
                 dot_product / (token_norm * doc_norm)
@@ -374,7 +432,8 @@ impl GoldbullBrief {
             };
             
             // Calculate attention-based importance using learned query vector
-            let query = self.summary_head.weight.i(0)?; // Use first row as importance query
+            let weight_tensor = &self.output_projection.weight();
+            let query = weight_tensor.narrow(0, 0, 1)?.squeeze(0)?; // Use first row as importance query
             let attention_score = token_repr.mul(&query)?.sum_all()?.to_scalar::<f32>()?;
             let attention_weight = attention_score.tanh(); // Normalize to [-1, 1]
             
@@ -569,7 +628,7 @@ impl TextEncoder {
             hidden = layer.forward(&hidden)?;
         }
         
-        self.norm.forward(&hidden)
+        Ok(self.norm.forward(&hidden)?)
     }
 }
 
@@ -596,7 +655,7 @@ impl SummaryDecoder {
             hidden = layer.forward_with_cross_attention(&hidden, encoder_output)?;
         }
         
-        self.norm.forward(&hidden)
+        Ok(self.norm.forward(&hidden)?)
     }
 }
 
@@ -702,7 +761,7 @@ impl MultiHeadAttention {
             .reshape((batch_size, seq_len, self.num_heads * self.head_dim))?;
         
         // Final projection
-        self.output_proj.forward(&attn_output)
+        Ok(self.output_proj.forward(&attn_output)?)
     }
 }
 
@@ -722,6 +781,6 @@ impl FeedForward {
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let hidden = self.linear1.forward(input)?;
         let activated = hidden.gelu()?;
-        self.linear2.forward(&activated)
+        Ok(self.linear2.forward(&activated)?)
     }
 }

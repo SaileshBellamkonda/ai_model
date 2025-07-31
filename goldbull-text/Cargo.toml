@@ -8,14 +8,6 @@ repository.workspace = true
 homepage.workspace = true
 description = "Text generation model for goldbull AI suite"
 
-[[bin]]
-name = "goldbull-text-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-text-train"
-path = "src/train.rs"
-
 [dependencies]
 goldbull-core = { path = "../goldbull-core" }
 goldbull-tokenizer = { path = "../goldbull-tokenizer" }

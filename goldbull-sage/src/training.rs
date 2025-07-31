@@ -118,7 +118,8 @@ impl QADataset {
         let lines: Vec<&str> = content.lines().collect();
         
         // Production-grade QA pair generation with sophisticated text analysis
-        let qa_pairs = Self::generate_sophisticated_qa_pairs_static(&content)?;
+        let mut temp_dataset = QADataset::new(tokenizer.clone());
+        let qa_pairs = temp_dataset.generate_sophisticated_qa_pairs_static(&content)?;
         
         for qa_pair in qa_pairs {
             samples.push(qa_pair);
@@ -153,7 +154,7 @@ impl QADataset {
     }
     
     /// Production-grade QA pair generation using advanced text analysis
-    fn generate_sophisticated_qa_pairs_static(content: &str) -> Result<Vec<QASample>> {
+    fn generate_sophisticated_qa_pairs_static(&self, content: &str) -> Result<Vec<QASample>> {
         let mut qa_pairs = Vec::new();
         
         // Step 1: Intelligent text segmentation
@@ -319,7 +320,7 @@ impl QADataset {
         
         for word in &words {
             let cleaned = word.to_lowercase().trim_matches(|c: char| !c.is_alphanumeric()).to_string();
-            if cleaned.len() > 4 && !Self::is_stop_word(&cleaned) {
+            if cleaned.len() > 4 && !Trainer::is_stop_word(&cleaned) {
                 *word_freq.entry(cleaned).or_insert(0) += 1;
             }
         }
@@ -329,11 +330,6 @@ impl QADataset {
             .filter(|(word, freq)| *freq > 1 || word.len() > 8)
             .map(|(word, _)| word)
             .collect()
-    }
-    
-    fn is_stop_word(word: &str) -> bool {
-        let stop_words = ["the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
-        stop_words.contains(&word)
     }
     
     fn generate_factual_question(&self, _text: &str, entity: &str) -> Option<String> {
@@ -524,14 +520,14 @@ impl Trainer {
             let question_tensor = Tensor::from_vec(
                 question.clone(),
                 (1, question.len()),
-                self.model.config().device(),
+                self.model.device(),
             )?;
             
             let context_tensor = if !context.is_empty() {
                 Some(Tensor::from_vec(
-                    context,
+                    context.clone(),
                     (1, context.len()),
-                    self.model.config().device(),
+                    self.model.device(),
                 )?)
             } else {
                 None
@@ -791,6 +787,11 @@ impl Trainer {
             }
         }
         None
+    }
+    
+    fn is_stop_word(word: &str) -> bool {
+        let stop_words = ["the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
+        stop_words.contains(&word)
     }
 }
 

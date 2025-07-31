@@ -35,11 +35,3 @@ hf-hub.workspace = true
 
 # HTTP for APIs
 reqwest.workspace = true
-
-[[bin]]
-name = "goldbull-sage-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-sage-train"
-path = "src/train.rs"

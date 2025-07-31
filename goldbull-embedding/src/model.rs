@@ -1,5 +1,5 @@
 use anyhow::Result;
-use candle_core::{Device, Tensor, Module};
+use candle_core::{Device, Tensor, Module, IndexOp};
 use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
@@ -266,7 +266,7 @@ impl GoldbullEmbedding {
         }
         
         // Final layer normalization
-        self.norm.forward(&hidden_states)
+        Ok(self.norm.forward(&hidden_states)?)
     }
     
     /// Create attention mask for padding tokens
@@ -279,7 +279,7 @@ impl GoldbullEmbedding {
     /// Normalize embedding vector to unit length
     fn normalize_embedding(&self, embedding: &Tensor) -> Result<Tensor> {
         let norm = embedding.sqr()?.sum_keepdim(1)?.sqrt()?;
-        embedding.div(&norm)
+        Ok(embedding.div(&norm)?)
     }
     
     /// Calculate cosine similarity between two embeddings
@@ -418,7 +418,7 @@ impl MultiHeadAttention {
             .reshape((batch_size, seq_len, hidden_size))?;
         
         // Final output projection
-        self.output_proj.forward(&attention_output)
+        Ok(self.output_proj.forward(&attention_output)?)
     }
 }
 
@@ -438,7 +438,7 @@ impl FeedForward {
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let hidden = self.linear1.forward(input)?;
         let activated = hidden.gelu()?; // GELU activation
-        self.linear2.forward(&activated)
+        Ok(self.linear2.forward(&activated)?)
     }
 }
 
@@ -471,7 +471,7 @@ impl EmbeddingPooler {
         
         // Apply projection if available
         if let Some(ref projection) = self.projection {
-            projection.forward(&pooled)
+            Ok(projection.forward(&pooled)?)
         } else {
             Ok(pooled)
         }
@@ -490,18 +490,18 @@ impl EmbeddingPooler {
         let mask_sum = attention_mask.sum(1)?.unsqueeze(1)?;
         
         // Avoid division by zero
-        let mask_sum_clamped = mask_sum.clamp_min(&Tensor::from_slice(&[1e-9], (), sequence_output.device())?)?;
+        let mask_sum_clamped = mask_sum.clamp(1e-9, f32::INFINITY)?;
         
         // Mean pooling
-        sum_embeddings.div(&mask_sum_clamped)
+        Ok(sum_embeddings.div(&mask_sum_clamped)?)
     }
     
     fn max_pooling(&self, sequence_output: &Tensor) -> Result<Tensor> {
-        sequence_output.max(1)
+        Ok(sequence_output.max(1)?)
     }
     
     fn cls_pooling(&self, sequence_output: &Tensor) -> Result<Tensor> {
         // Take the first token (CLS token) representation
-        sequence_output.i((.., 0, ..))
+        Ok(sequence_output.i((.., 0, ..))?)
     }
 }

@@ -36,11 +36,3 @@ hf-hub.workspace = true
 
 # HTTP for similarity APIs
 reqwest.workspace = true
-
-[[bin]]
-name = "goldbull-embedding-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-embedding-train"
-path = "src/train.rs"

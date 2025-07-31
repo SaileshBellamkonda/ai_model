@@ -30,11 +30,3 @@ safetensors.workspace = true
 
 # Image processing would go here (placeholder)
 # image = "0.24"
-
-[[bin]]
-name = "goldbull-vision-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-vision-train" 
-path = "src/train.rs"

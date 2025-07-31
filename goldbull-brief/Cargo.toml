@@ -35,11 +35,3 @@ hf-hub.workspace = true
 
 # Text processing
 regex.workspace = true
-
-[[bin]]
-name = "goldbull-brief-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-brief-train"
-path = "src/train.rs"

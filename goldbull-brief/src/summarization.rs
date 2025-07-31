@@ -68,4 +68,6 @@ pub enum SummaryStyle {
     Formal,
     /// Casual style
     Casual,
+    /// Bullet point format
+    BulletPoints,
 }

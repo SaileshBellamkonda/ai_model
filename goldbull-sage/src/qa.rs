@@ -234,7 +234,8 @@ impl QuestionClassifier {
         
         // Production-grade keyword extraction using TF-IDF, linguistic analysis, and NER
         let context_processor = ContextProcessor::new(1000);
-        let keywords = context_processor.extract_sophisticated_keywords(question, None)?;
+        let keywords = context_processor.extract_sophisticated_keywords(question, None)
+            .unwrap_or_else(|_| Vec::new());
         
         // Determine expected answer format
         let expected_format = match question_type {

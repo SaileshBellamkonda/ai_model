@@ -28,11 +28,3 @@ candle-core.workspace = true
 candle-nn.workspace = true
 candle-transformers.workspace = true
 safetensors.workspace = true
-
-[[bin]]
-name = "goldbull-multimodel-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-multimodel-train"
-path = "src/train.rs"

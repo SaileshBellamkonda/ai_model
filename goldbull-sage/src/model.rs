@@ -290,7 +290,7 @@ impl GoldbullSage {
             
             // Step 5: Gated fusion mechanism
             let fusion_gate = self.fusion_gate.forward(&question_pooled.add(&context_pooled)?)?;
-            let gate_weights = fusion_gate.sigmoid()?;
+            let gate_weights = fusion_gate.tanh()?; // Use tanh instead of sigmoid
             
             // Apply gated fusion: g * question + (1-g) * context
             let one_minus_gate = Tensor::ones_like(&gate_weights)?.sub(&gate_weights)?;
@@ -317,7 +317,7 @@ impl GoldbullSage {
         
         // Generate answer through decoder
         let answer_logits = self.answer_decoder.forward(&combined.unsqueeze(1)?)?;
-        self.output_projection.forward(&answer_logits)
+        Ok(self.output_projection.forward(&answer_logits)?)
     }
     
     /// Generate answer text from logits
@@ -427,7 +427,7 @@ impl GoldbullSage {
     
     /// Calculate confidence score from logits
     fn calculate_confidence(&self, logits: &Tensor) -> Result<f64> {
-        let probabilities = candle_nn::ops::softmax(logits, -1)?;
+        let probabilities = candle_nn::ops::softmax(logits, 1)?;
         let max_prob: f32 = probabilities.max(2)?.to_vec1()?[0];
         Ok(max_prob as f64)
     }
@@ -440,6 +440,11 @@ impl GoldbullSage {
     /// Get model configuration
     pub fn config(&self) -> &ModelConfig {
         &self.config
+    }
+    
+    /// Get model device
+    pub fn device(&self) -> &Device {
+        &self.device
     }
 }
 
@@ -462,7 +467,7 @@ impl QuestionEncoder {
             hidden = layer.forward(&hidden)?;
         }
         
-        self.norm.forward(&hidden)
+        Ok(self.norm.forward(&hidden)?)
     }
 }
 
@@ -485,7 +490,7 @@ impl ContextEncoder {
             hidden = layer.forward(&hidden)?;
         }
         
-        self.norm.forward(&hidden)
+        Ok(self.norm.forward(&hidden)?)
     }
 }
 
@@ -508,7 +513,7 @@ impl AnswerDecoder {
             hidden = layer.forward(&hidden)?;
         }
         
-        self.norm.forward(&hidden)
+        Ok(self.norm.forward(&hidden)?)
     }
 }
 
@@ -601,7 +606,7 @@ impl MultiHeadAttention {
             .reshape((batch_size, seq_len, self.num_heads * self.head_dim))?;
         
         // Final projection
-        self.output_proj.forward(&attn_output)
+        Ok(self.output_proj.forward(&attn_output)?)
     }
 }
 
@@ -629,6 +634,6 @@ impl FeedForward {
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let hidden = self.linear1.forward(input)?;
         let activated = hidden.gelu()?;
-        self.linear2.forward(&activated)
+        Ok(self.linear2.forward(&activated)?)
     }
 }
