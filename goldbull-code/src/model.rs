@@ -2774,6 +2774,11 @@ impl GoldbullCode {
         // Parameters + activations + gradients (during training)
         parameter_count * dtype_size * 3
     }
+    
+    /// Get current memory usage in bytes
+    pub fn get_memory_usage(&self) -> usize {
+        self.calculate_memory_footprint()
+    }
 }
 
 impl CodeTransformerBlock {

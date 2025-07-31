@@ -285,6 +285,22 @@ impl GoldbullVision {
     pub fn config(&self) -> &ModelConfig {
         &self.config
     }
+    
+    /// Get current memory usage in bytes
+    pub fn get_memory_usage(&self) -> usize {
+        // Estimate memory usage based on model parameters
+        let hidden_size = self.config.hidden_size;
+        let num_layers = self.config.num_layers;
+        
+        // Vision models have convolutional layers and transformers
+        let conv_params = 64 * 3 * 3 * 3 + 128 * 64 * 3 * 3 + 256 * 128 * 3 * 3 + 512 * 256 * 3 * 3; // Conv layers
+        let classifier_params = hidden_size * 1000; // Classification head
+        
+        let total_params = conv_params + classifier_params;
+        
+        // Assume F16 (2 bytes per parameter) + activation memory
+        total_params * 2 * 2 // 2x for activations
+    }
 }
 
 impl ImageEncoder {
