@@ -96,7 +96,23 @@ pub fn get_total_memory() -> usize {
     // Platform-specific implementations with fallbacks
     #[cfg(target_os = "windows")]
     {
-        // Windows implementation would go here
+        // Use Windows API to get actual total memory information
+        use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+        
+        let mut mem_status = MEMORYSTATUSEX {
+            dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
+            ..Default::default()
+        };
+        
+        unsafe {
+            if GlobalMemoryStatusEx(&mut mem_status).into() {
+                // Return total physical memory in bytes
+                // ullTotalPhys contains total physical memory
+                return mem_status.ullTotalPhys as usize;
+            }
+        }
+        
+        // Fallback if Windows API call fails
         return 8 * 1024 * 1024 * 1024; // 8GB fallback
     }
     
