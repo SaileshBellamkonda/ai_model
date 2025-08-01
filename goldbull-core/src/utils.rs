@@ -105,7 +105,7 @@ pub fn get_total_memory() -> usize {
         };
         
         unsafe {
-            if GlobalMemoryStatusEx(&mut mem_status).into() {
+            if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
                 // Return total physical memory in bytes
                 // ullTotalPhys contains total physical memory
                 return mem_status.ullTotalPhys as usize;
@@ -113,7 +113,7 @@ pub fn get_total_memory() -> usize {
         }
         
         // Fallback if Windows API call fails
-        return 8 * 1024 * 1024 * 1024; // 8GB fallback
+        8 * 1024 * 1024 * 1024 // 8GB fallback
     }
     
     // Fallback for non-Windows platforms
@@ -177,7 +177,7 @@ pub fn get_available_memory() -> usize {
         };
         
         unsafe {
-            if GlobalMemoryStatusEx(&mut mem_status).into() {
+            if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
                 // Return available physical memory in bytes
                 // ullAvailPhys contains available physical memory
                 return mem_status.ullAvailPhys as usize;
@@ -185,7 +185,7 @@ pub fn get_available_memory() -> usize {
         }
         
         // Fallback if Windows API call fails
-        return 4 * 1024 * 1024 * 1024; // 4GB fallback
+        4 * 1024 * 1024 * 1024 // 4GB fallback
     }
     
     // Fallback for non-Windows platforms or if system calls fail
