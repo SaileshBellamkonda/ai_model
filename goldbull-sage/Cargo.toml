@@ -20,6 +20,7 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
 clap.workspace = true
 
 # ML/AI dependencies
@@ -35,3 +36,6 @@ hf-hub.workspace = true
 
 # HTTP for APIs
 reqwest.workspace = true
+rustls.workspace = true
+tokio-rustls.workspace = true
+hyper-rustls.workspace = true

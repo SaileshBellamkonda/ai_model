@@ -36,3 +36,6 @@ hf-hub.workspace = true
 
 # HTTP for similarity APIs
 reqwest.workspace = true
+rustls.workspace = true
+tokio-rustls.workspace = true
+hyper-rustls.workspace = true
