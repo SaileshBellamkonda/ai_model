@@ -93,13 +93,30 @@ pub fn get_total_memory() -> usize {
         }
     }
     
+    // Platform-specific implementations with fallbacks
     #[cfg(target_os = "windows")]
     {
-        // Windows implementation would go here
-        return 8 * 1024 * 1024 * 1024; // 8GB fallback
+        // Use Windows API to get actual total memory information
+        use windows::Win32::System::SystemInformation::{GlobalMemoryStatusEx, MEMORYSTATUSEX};
+        
+        let mut mem_status = MEMORYSTATUSEX {
+            dwLength: std::mem::size_of::<MEMORYSTATUSEX>() as u32,
+            ..Default::default()
+        };
+        
+        unsafe {
+            if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
+                // Return total physical memory in bytes
+                // ullTotalPhys contains total physical memory
+                return mem_status.ullTotalPhys as usize;
+            }
+        }
+        
+        // Fallback if Windows API call fails
+        8 * 1024 * 1024 * 1024 // 8GB fallback
     }
     
-    // Fallback
+    // Fallback for non-Windows platforms
     4 * 1024 * 1024 * 1024 // 4GB fallback
 }
 
@@ -160,7 +177,7 @@ pub fn get_available_memory() -> usize {
         };
         
         unsafe {
-            if GlobalMemoryStatusEx(&mut mem_status).as_bool() {
+            if GlobalMemoryStatusEx(&mut mem_status).is_ok() {
                 // Return available physical memory in bytes
                 // ullAvailPhys contains available physical memory
                 return mem_status.ullAvailPhys as usize;
@@ -168,10 +185,10 @@ pub fn get_available_memory() -> usize {
         }
         
         // Fallback if Windows API call fails
-        return 4 * 1024 * 1024 * 1024; // 4GB fallback
+        4 * 1024 * 1024 * 1024 // 4GB fallback
     }
     
-    // Fallback for unsupported platforms or if system calls fail
+    // Fallback for non-Windows platforms or if system calls fail
     2 * 1024 * 1024 * 1024 // 2GB conservative fallback
 }
 
