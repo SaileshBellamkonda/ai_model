@@ -76,3 +76,6 @@ chrono = { version = "0.4", features = ["serde"] }
 
 # TLS provider (using aws-lc-rs instead of ring for security)
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "logging", "std", "tls12"] }
+
+# Force newer ring version to fix RUSTSEC-2025-0009
+ring = "0.17.14"
