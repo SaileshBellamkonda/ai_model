@@ -30,7 +30,3 @@ windows = { version = "0.52", features = [
     "Win32_System_SystemInformation",
     "Win32_Foundation",
 ] }
-
-[[example]]
-name = "cpu_optimization_demo"
-path = "../examples/cpu_optimization_demo.rs"
