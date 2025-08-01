@@ -46,7 +46,7 @@ regex = "1.10"
 base64 = "0.21"
 
 # Data processing
-hf-hub = { version = "0.4", default-features = false, features = ["tokio", "rustls-tls"] }
+hf-hub = { version = "0.4", default-features = false, features = ["tokio"] }
 memmap2 = "0.9"
 rayon = "1.8"
 num_cpus = "1.16"
@@ -55,7 +55,7 @@ num_cpus = "1.16"
 ort = "1.16"  # ONNX Runtime
 
 # HTTP/API
-reqwest = { version = "0.12", default-features = false, features = ["json", "charset", "http2", "macos-system-configuration", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "charset", "http2", "macos-system-configuration", "__rustls"] }
 
 # Tree-sitter for syntax analysis
 tree-sitter = "0.20"
@@ -74,8 +74,7 @@ walkdir = "2.4"
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
-# TLS provider (using aws-lc-rs instead of ring for security)
-rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "logging", "std", "tls12"] }
-
-# Force newer ring version to fix RUSTSEC-2025-0009
-ring = "0.17.14"
+# TLS provider configuration
+rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "logging", "std", "tls12"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
+hyper-rustls = { version = "0.27", default-features = false, features = ["aws-lc-rs", "http1", "http2", "tls12"] }
