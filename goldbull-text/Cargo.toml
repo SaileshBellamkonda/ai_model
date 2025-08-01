@@ -11,6 +11,8 @@ description = "Text generation model for goldbull AI suite"
 [dependencies]
 goldbull-core = { path = "../goldbull-core" }
 goldbull-tokenizer = { path = "../goldbull-tokenizer" }
+goldbull-code = { path = "../goldbull-code" }
+goldbull-vision = { path = "../goldbull-vision" }
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
@@ -28,3 +30,7 @@ rand = "0.8"
 safetensors.workspace = true
 bytemuck = "1.14"
 chrono = { version = "0.4", features = ["serde"] }
+
+[[example]]
+name = "cpu_optimization_demo"
+path = "examples/cpu_optimization_demo.rs"
