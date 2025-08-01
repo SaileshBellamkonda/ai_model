@@ -46,7 +46,7 @@ regex = "1.10"
 base64 = "0.21"
 
 # Data processing
-hf-hub = "0.3"
+hf-hub = { version = "0.4", default-features = false, features = ["tokio", "rustls-tls"] }
 memmap2 = "0.9"
 rayon = "1.8"
 num_cpus = "1.16"
@@ -55,7 +55,7 @@ num_cpus = "1.16"
 ort = "1.16"  # ONNX Runtime
 
 # HTTP/API
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "charset", "http2", "macos-system-configuration", "rustls-tls"] }
 
 # Tree-sitter for syntax analysis
 tree-sitter = "0.20"
@@ -73,3 +73,6 @@ walkdir = "2.4"
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
+
+# TLS provider (using aws-lc-rs instead of ring for security)
+rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs", "logging", "std", "tls12"] }
