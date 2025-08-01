@@ -8,14 +8,6 @@ repository.workspace = true
 homepage.workspace = true
 description = "Code completion model for goldbull AI suite"
 
-[[bin]]
-name = "goldbull-code-cli"
-path = "src/main.rs"
-
-[[bin]]
-name = "goldbull-code-train"
-path = "src/train.rs"
-
 [dependencies]
 goldbull-core = { path = "../goldbull-core" }
 goldbull-tokenizer = { path = "../goldbull-tokenizer" }
@@ -47,3 +39,9 @@ tree-sitter-java.workspace = true
 tree-sitter-cpp.workspace = true
 tree-sitter-c.workspace = true
 tree-sitter-go.workspace = true
+half = "2.3"
+libloading = "0.8"
+
+[features]
+default = []
+cuda = ["candle-core/cuda"]

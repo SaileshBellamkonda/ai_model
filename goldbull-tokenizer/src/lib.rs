@@ -23,34 +23,39 @@ pub struct TokenizerConfig {
 }
 
 impl Default for TokenizerConfig {
-    /// Default configuration for the tokenizer with OpenAI-style chat template tokens
+    /// Default configuration for the tokenizer with generic chat template tokens
     /// 
-    /// Special tokens follow OpenAI's format for chat completion:
-    /// - <|im_start|>: Beginning of message (replaces traditional BOS)
-    /// - <|im_end|>: End of message (replaces traditional EOS)  
-    /// - <|system|>, <|user|>, <|assistant|>: Role-specific tokens for chat
+    /// Special tokens designed for goldbull models (avoiding OpenAI-specific tokens):
+    /// - <bos>: Beginning of sequence (traditional BOS)
+    /// - <eos>: End of sequence (traditional EOS)  
+    /// - <system>, <user>, <assistant>: Role-specific tokens for chat
     /// - <pad>: Padding token for batch processing
     /// - <unk>: Unknown token for out-of-vocabulary words
     /// 
+    /// Note: Does NOT use OpenAI's endoftext token as per requirements
     /// Vocabulary size set to 1M for multilingual BPEmb compatibility
     /// Max sequence length set to 32K tokens for long-context support
     fn default() -> Self {
         let mut special_tokens = HashMap::new();
-        // Chat template special tokens following OpenAI's format
+        // Generic special tokens (not OpenAI-specific)
         special_tokens.insert("<pad>".to_string(), 0);
-        special_tokens.insert("<|im_end|>".to_string(), 1);
-        special_tokens.insert("<|im_start|>".to_string(), 2);
+        special_tokens.insert("<eos>".to_string(), 1);
+        special_tokens.insert("<bos>".to_string(), 2);
         special_tokens.insert("<unk>".to_string(), 3);
-        special_tokens.insert("<|system|>".to_string(), 4);
-        special_tokens.insert("<|user|>".to_string(), 5);
-        special_tokens.insert("<|assistant|>".to_string(), 6);
+        special_tokens.insert("<system>".to_string(), 4);
+        special_tokens.insert("<user>".to_string(), 5);
+        special_tokens.insert("<assistant>".to_string(), 6);
+        // Advanced chat format tokens
+        special_tokens.insert("</s>".to_string(), 7);
+        special_tokens.insert("<|im_start|>".to_string(), 8);
+        special_tokens.insert("<|system|>".to_string(), 9);
         
         Self {
             vocab_size: 1_000_000, // BPEmb multilingual vocab
             max_sequence_length: 32768,
             pad_token: "<pad>".to_string(),
-            eos_token: "<|im_end|>".to_string(),
-            bos_token: "<|im_start|>".to_string(),
+            eos_token: "<eos>".to_string(),
+            bos_token: "<bos>".to_string(),
             unk_token: "<unk>".to_string(),
             special_tokens,
             merges_file: None,

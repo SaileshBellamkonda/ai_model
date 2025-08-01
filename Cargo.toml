@@ -5,6 +5,11 @@ members = [
     "goldbull-tokenizer",
     "goldbull-text",
     "goldbull-code",
+    "goldbull-sage",
+    "goldbull-brief",
+    "goldbull-vision",
+    "goldbull-multimodel",
+    "goldbull-embedding",
 ]
 
 [workspace.package]
@@ -44,6 +49,7 @@ base64 = "0.21"
 hf-hub = "0.3"
 memmap2 = "0.9"
 rayon = "1.8"
+num_cpus = "1.16"
 
 # Inference engines
 ort = "1.16"  # ONNX Runtime

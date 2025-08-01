@@ -19,9 +19,18 @@ candle-core.workspace = true
 candle-nn.workspace = true
 ndarray.workspace = true
 safetensors.workspace = true
+rayon.workspace = true
+num_cpus.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.52", features = [
     "Win32_System_SystemInformation",
     "Win32_Foundation",
 ] }
+
+[[example]]
+name = "cpu_optimization_demo"
+path = "../examples/cpu_optimization_demo.rs"
