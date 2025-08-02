@@ -2,6 +2,18 @@
 
 A family of efficient, lightweight AI models designed for CPU execution with <2GB memory footprint.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Model Specifications](#model-specifications)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Project Structure](#project-structure)
+- [License](#license)
+
 ## Overview
 
 The Goldbull AI Model Suite consists of specialized models for different AI tasks:
@@ -62,6 +74,14 @@ cargo test --workspace
 | Vision Model | 🔄 | <2GB | Computer vision |
 | Multimodel | 🔄 | <2GB | Multimodal AI |
 | Embedding | 🔄 | <2GB | Embeddings |
+
+## Documentation
+
+📚 **Comprehensive Documentation Available:**
+
+- **[Architecture Guide](ARCHITECTURE.md)** - Detailed system design, component relationships, and technical architecture
+- **[Usage Guide](USAGE.md)** - Complete guide on how to use the models with examples and best practices  
+- **[Training Guide](TRAINING.md)** - Comprehensive training and fine-tuning documentation
 
 ## Development
 
