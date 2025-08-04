@@ -230,14 +230,14 @@ impl ImagePreprocessor {
         // Step 3: Advanced noise reduction using bilateral filtering approximation
         for y in 0..height {
             for x in 0..width {
-                for c in 0..3 {
+                for (c, adaptive_lut) in adaptive_luts.iter().enumerate() {
                     let idx = (y * width + x) * 3 + c;
                     if idx >= image_data.len() { continue; }
                     
                     let pixel_val = image_data[idx] as f32;
                     
                     // Apply adaptive histogram equalization
-                    let equalized_val = adaptive_luts[c][pixel_val as usize];
+                    let equalized_val = adaptive_lut[pixel_val as usize];
                     
                     // Bilateral filtering approximation (simplified)
                     let mut filtered_val = equalized_val;
@@ -281,7 +281,7 @@ impl ImagePreprocessor {
                     let normalized = (gamma_corrected - self.normalization.mean[c]) / self.normalization.std[c];
                     
                     // Step 6: Clipping to prevent extreme values
-                    processed[idx] = normalized.max(-3.0).min(3.0);
+                    processed[idx] = normalized.clamp(-3.0, 3.0);
                 }
             }
         }
@@ -335,7 +335,7 @@ impl ImagePreprocessor {
                                   else if num_classes > 1000 { 0.8 } // Large classification may need less aggressive augmentation
                                   else { 1.0 };
         
-        let final_aug_prob = (aug_prob * task_specific_factor as f32).min(0.95f32).max(0.1f32);
+        let final_aug_prob = (aug_prob * task_specific_factor as f32).clamp(0.1f32, 0.95f32);
         
         // 5. Deterministic decision with sophisticated pseudo-randomness
         let decision_seed = (training_progress as u64).wrapping_mul(7919) 
@@ -370,7 +370,7 @@ impl ImagePreprocessor {
             
             if total_mem > 0 && available_mem > 0 {
                 let used_ratio = 1.0 - (available_mem as f32 / total_mem as f32);
-                return used_ratio.min(1.0).max(0.0);
+                return used_ratio.clamp(0.0, 1.0);
             }
         }
         
@@ -450,7 +450,7 @@ impl ImagePreprocessor {
             };
             
             // Clamp to valid range for normalized data
-            *pixel = gamma_adjusted.max(-3.0).min(3.0);
+            *pixel = gamma_adjusted.clamp(-3.0, 3.0);
         }
         
         Ok(())
@@ -543,7 +543,7 @@ impl ImagePreprocessor {
             let noise = (noise_seed.sin() * noise_std as f64) as f32;
             
             // Add noise with clamping
-            *pixel = (*pixel + noise).max(-3.0).min(3.0);
+            *pixel = (*pixel + noise).clamp(-3.0, 3.0);
         }
         
         Ok(())
@@ -554,7 +554,7 @@ impl ImagePreprocessor {
         // Implement lightweight Cutout-style augmentation
         // Randomly mask small regions to improve generalization
         
-        let cutout_probability = 0.1f32; // 10% chance of applying cutout
+        let _cutout_probability = 0.1f32; // 10% chance of applying cutout
         let cutout_size = 8; // 8x8 pixel regions
         
         // Deterministic "random" selection

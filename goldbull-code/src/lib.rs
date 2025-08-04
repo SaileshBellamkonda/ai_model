@@ -12,7 +12,6 @@ pub use syntax::{SyntaxAnalyzer, LanguageType, CodeFeatures};
 
 use anyhow::Result;
 use goldbull_core::ModelConfig;
-use goldbull_tokenizer::BpeTokenizer;
 use candle_core::Device;
 
 /// Create a new code completion model with default configuration

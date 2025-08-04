@@ -486,7 +486,7 @@ impl GoldbullCode {
         }
         
         // Validate feed-forward dimensions (typically 4x hidden size)
-        let expected_ff_dim = self.config.hidden_size * 4;
+        let _expected_ff_dim = self.config.hidden_size * 4;
         // Both models should have the same FF dimension structure
         
         // Validate output projection dimensions
@@ -791,8 +791,8 @@ impl GoldbullCode {
         let mut other_requires_grad = false;
         
         // Sample some tensors to check gradient state
-        for (tensor_name, self_var) in self_data.iter() {
-            if let Some(other_var) = other_data.get(tensor_name) {
+        for (tensor_name, _self_var) in self_data.iter() {
+            if let Some(_other_var) = other_data.get(tensor_name) {
                 // Check if tensors support gradient computation
                 // Note: In candle, Var itself indicates gradient support capability
                 // If we have a Var in the VarMap, it supports gradient computation
@@ -2635,7 +2635,7 @@ impl GoldbullCode {
         input_ids: &Tensor,
         attention_mask: Option<&Tensor>
     ) -> Result<Tensor> {
-        let batch_size = input_ids.dim(0)?;
+        let _batch_size = input_ids.dim(0)?;
         let seq_len = input_ids.dim(1)?;
         
         // Token embeddings
@@ -2661,7 +2661,7 @@ impl GoldbullCode {
     /// Add code-aware positional embeddings
     /// Incorporates syntax structure and indentation patterns
     fn add_positional_embeddings(&self, embeddings: &Tensor, seq_len: usize) -> Result<Tensor> {
-        let batch_size = embeddings.dim(0)?;
+        let _batch_size = embeddings.dim(0)?;
         let hidden_size = embeddings.dim(2)?;
         
         // Create sinusoidal positional embeddings with code-specific modifications

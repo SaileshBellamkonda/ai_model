@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
-use candle_core::{Device, Tensor, Module};
+use candle_core::{Device, Tensor};
 use candle_nn::VarMap;
-use goldbull_core::{ModelConfig, utils::get_available_memory};
+use goldbull_core::ModelConfig;
 use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use crate::model::{GoldbullCode, CodeModelMetadata};
+use crate::model::GoldbullCode;
 use crate::syntax::{LanguageType, SyntaxAnalyzer, CodeFeatures};
 
 /// Comprehensive training framework for code completion models
@@ -658,7 +658,7 @@ impl Trainer {
     }
     
     /// Backward pass and parameter update
-    fn backward_pass(&mut self, loss: Tensor) -> Result<()> {
+    fn backward_pass(&mut self, _loss: Tensor) -> Result<()> {
         // In a real implementation, this would:
         // 1. Compute gradients via backpropagation
         // 2. Apply gradient clipping

@@ -1,11 +1,8 @@
 use anyhow::Result;
-use candle_core::{Device, Tensor, IndexOp, Module};
-use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
+use candle_core::{Tensor, IndexOp};
+use goldbull_tokenizer::Tokenizer;
 use rand::Rng;
-use std::collections::VecDeque;
-use crate::model::GoldbullCode;
-use crate::completion::{CompletionRequest, CompletionResponse, CompletionEngine};
-use crate::syntax::{LanguageType, SyntaxAnalyzer, CodeFeatures};
+use crate::syntax::LanguageType;
 
 /// Advanced code generation engine
 /// Combines transformer-based generation with syntax awareness and code intelligence
@@ -439,9 +436,9 @@ impl<'a> CodeGenerator<'a> {
     ) -> Result<Vec<u32>> {
         let mut generated_tokens = Vec::new();
         let mut current_input = input_tensor.clone();
-        let mut generation_time = std::time::Instant::now();
+        let generation_time = std::time::Instant::now();
         
-        for step in 0..config.max_tokens {
+        for _step in 0..config.max_tokens {
             // Check timeout
             if generation_time.elapsed().as_secs() > config.max_generation_time {
                 tracing::warn!("Generation timed out after {} seconds", config.max_generation_time);
@@ -511,7 +508,7 @@ impl<'a> CodeGenerator<'a> {
         }
         
         let vocab_size = logits.dim(0)?;
-        let k = k.min(vocab_size);
+        let _k = k.min(vocab_size);
         
         // For now, return logits as-is since topk is not available
         // In a real implementation, we'd implement proper top-k filtering
@@ -695,7 +692,7 @@ impl QualityValidator {
         })
     }
     
-    fn validate_syntax(&self, code: &str, language: LanguageType) -> Result<SyntaxValidation> {
+    fn validate_syntax(&self, _code: &str, _language: LanguageType) -> Result<SyntaxValidation> {
         // Simplified syntax validation
         // In practice, would use language-specific parsers
         Ok(SyntaxValidation {
@@ -706,7 +703,7 @@ impl QualityValidator {
         })
     }
     
-    fn check_syntax_score(&self, code: &str, language: LanguageType) -> Result<f64> {
+    fn check_syntax_score(&self, code: &str, _language: LanguageType) -> Result<f64> {
         // Simple heuristic - check for balanced brackets
         let open_braces = code.matches('{').count();
         let close_braces = code.matches('}').count();
@@ -750,7 +747,7 @@ impl SyntaxPostProcessor {
         })
     }
     
-    fn format_code(&self, code: &str, language: LanguageType, style: &StylePreferences) -> Result<String> {
+    fn format_code(&self, code: &str, _language: LanguageType, style: &StylePreferences) -> Result<String> {
         // Simple formatting - in practice would use language-specific formatters
         let mut formatted = code.to_string();
         
@@ -762,7 +759,7 @@ impl SyntaxPostProcessor {
         Ok(formatted)
     }
     
-    fn auto_complete(&self, code: &str, language: LanguageType) -> Result<String> {
+    fn auto_complete(&self, code: &str, _language: LanguageType) -> Result<String> {
         let mut completed = code.to_string();
         
         // Simple auto-completion for missing brackets

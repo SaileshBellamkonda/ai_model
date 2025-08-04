@@ -1,6 +1,6 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
-use tree_sitter::{Language, Node, Parser, Tree, TreeCursor};
+use tree_sitter::{Node, Parser, TreeCursor};
 use std::collections::{HashMap, HashSet};
 
 /// Supported programming languages for code analysis
@@ -296,29 +296,9 @@ impl SyntaxAnalyzer {
     pub fn new(language: LanguageType) -> Result<Self> {
         let mut parser = Parser::new();
         
-        // Set language-specific grammar
-        let tree_sitter_language = match language {
-            LanguageType::Rust => tree_sitter_rust::language(),
-            LanguageType::Python => tree_sitter_python::language(),
-            LanguageType::JavaScript => tree_sitter_javascript::language(),
-            LanguageType::TypeScript => tree_sitter_typescript::language_typescript(),
-            LanguageType::Java => tree_sitter_java::language(),
-            LanguageType::Cpp => tree_sitter_cpp::language(),
-            LanguageType::C => tree_sitter_c::language(),
-            LanguageType::Go => tree_sitter_go::language(),
-            LanguageType::Unknown => return Err(anyhow::anyhow!("Cannot analyze unknown language")),
-        };
-        
-        parser.set_language(tree_sitter_language)
-            .map_err(|e| anyhow::anyhow!("Failed to set parser language: {}", e))?;
-        
-        let patterns = Self::create_language_patterns(language);
-        
-        Ok(Self {
-            parser,
-            language,
-            patterns,
-        })
+        // Temporarily disable tree-sitter functionality due to version conflicts
+        // TODO: Fix tree-sitter version compatibility 
+        return Err(anyhow::anyhow!("Tree-sitter functionality temporarily disabled"));
     }
     
     /// Analyze code and extract comprehensive features
