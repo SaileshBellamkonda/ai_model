@@ -113,7 +113,7 @@ pub fn get_total_memory() -> usize {
         }
         
         // Fallback if Windows API call fails
-        8 * 1024 * 1024 * 1024 // 8GB fallback
+        return 8 * 1024 * 1024 * 1024; // 8GB fallback
     }
     
     // Fallback for non-Windows platforms
@@ -185,7 +185,7 @@ pub fn get_available_memory() -> usize {
         }
         
         // Fallback if Windows API call fails
-        4 * 1024 * 1024 * 1024 // 4GB fallback
+        return 4 * 1024 * 1024 * 1024; // 4GB fallback
     }
     
     // Fallback for non-Windows platforms or if system calls fail
