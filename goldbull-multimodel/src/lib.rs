@@ -9,7 +9,6 @@ pub use multimodal::{MultimodalRequest, MultimodalResponse, ModalityType, Modali
 use anyhow::Result;
 use goldbull_core::ModelConfig;
 use candle_core::Device;
-use std::collections::HashMap;
 
 /// Create a new multimodal AI model with default configuration
 pub fn new_multimodal_model(device: Device) -> Result<GoldbullMultimodel> {
@@ -28,6 +27,7 @@ pub async fn process_multimodal(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn test_multimodal_processing() {

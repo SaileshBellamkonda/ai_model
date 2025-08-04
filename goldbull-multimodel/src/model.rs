@@ -120,9 +120,6 @@ pub struct AudioModalityEncoder {
 /// Cross-modal fusion mechanism
 #[derive(Debug)]
 pub struct CrossModalFusion {
-    text_to_vision_attention: CrossModalAttention,
-    vision_to_text_attention: CrossModalAttention,
-    audio_to_text_attention: CrossModalAttention,
     fusion_norm: candle_nn::LayerNorm,
     fusion_projection: candle_nn::Linear,
     attention_query: candle_nn::Linear,
@@ -363,9 +360,6 @@ impl GoldbullMultimodel {
     
     /// Generate image output description from fused representation
     async fn generate_image_output(&self, fused_repr: &Tensor) -> Result<Vec<u8>> {
-        let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
-        let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
-        
         // Production-grade image generation with latent space sampling and proper decoding
         let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
         let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
@@ -441,7 +435,7 @@ impl GoldbullMultimodel {
         for chunk in feature_vec.chunks(3) {
             for &feature in chunk {
                 // Scale and clamp to [0, 255] range
-                let quantized = ((feature.tanh() + 1.0) * 127.5).max(0.0).min(255.0) as u8;
+                let quantized = ((feature.tanh() + 1.0) * 127.5).clamp(0.0, 255.0) as u8;
                 result.push(quantized);
             }
             
@@ -550,8 +544,8 @@ impl GoldbullMultimodel {
             
             // Tile-based processing (8x8 tiles for local adaptation)
             let tile_size = 8;
-            let tiles_h = (height + tile_size - 1) / tile_size;
-            let tiles_w = (width + tile_size - 1) / tile_size;
+            let tiles_h = height.div_ceil(tile_size);
+            let tiles_w = width.div_ceil(tile_size);
             
             for tile_y in 0..tiles_h {
                 for tile_x in 0..tiles_w {
@@ -591,7 +585,7 @@ impl GoldbullMultimodel {
                                 (original_pixel - tile_mean) * enhancement_factor;
                             
                             // Ensure valid range [0, 255]
-                            let clamped_pixel = enhanced_pixel.max(0.0).min(255.0);
+                            let clamped_pixel = enhanced_pixel.clamp(0.0, 255.0);
                             
                             if equalized_data.len() <= pixel_idx {
                                 equalized_data.resize(pixel_idx + 1, 0.0);
@@ -680,7 +674,7 @@ impl GoldbullMultimodel {
                     
                     // Combine all factors for sophisticated pixel reconstruction
                     let pixel_value = (base_value * color_coherence * spatial_weight * edge_factor * 255.0 / 255.0)
-                        .max(0.0).min(255.0);
+                        .clamp(0.0, 255.0);
                     
                     processed_pixels.push(pixel_value);
                 }
@@ -817,6 +811,11 @@ impl GoldbullMultimodel {
     pub fn config(&self) -> &ModelConfig {
         &self.config
     }
+    
+    /// Get model variable map for weight management
+    pub fn var_map(&self) -> &VarMap {
+        &self.var_map
+    }
 }
 
 // Implementation details for modality encoders and other components...
@@ -827,7 +826,7 @@ impl TextModalityEncoder {
         
         let mut transformer_layers = Vec::new();
         for i in 0..(config.num_layers / 3) {
-            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(&format!("layer_{}", i)))?);
+            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(format!("layer_{i}")))?);
         }
         
         let norm = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm"))?;
@@ -854,7 +853,7 @@ impl VisionModalityEncoder {
         
         let mut transformer_layers = Vec::new();
         for i in 0..(config.num_layers / 3) {
-            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(&format!("layer_{}", i)))?);
+            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(format!("layer_{i}")))?);
         }
         
         let norm = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm"))?;
@@ -881,7 +880,7 @@ impl AudioModalityEncoder {
         
         let mut transformer_layers = Vec::new();
         for i in 0..(config.num_layers / 3) {
-            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(&format!("layer_{}", i)))?);
+            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(format!("layer_{i}")))?);
         }
         
         let norm = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm"))?;
@@ -904,9 +903,6 @@ impl AudioModalityEncoder {
 
 impl CrossModalFusion {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        let text_to_vision_attention = CrossModalAttention::new(config, var_builder.pp("text_to_vision"))?;
-        let vision_to_text_attention = CrossModalAttention::new(config, var_builder.pp("vision_to_text"))?;
-        let audio_to_text_attention = CrossModalAttention::new(config, var_builder.pp("audio_to_text"))?;
         let fusion_norm = layer_norm(config.hidden_size, 1e-5, var_builder.pp("fusion_norm"))?;
         let fusion_projection = linear(config.hidden_size * 3, config.hidden_size, var_builder.pp("fusion_proj"))?;
         let attention_query = linear(config.hidden_size, config.hidden_size, var_builder.pp("attention_query"))?;
@@ -914,9 +910,6 @@ impl CrossModalFusion {
         let fusion_mlp = FeedForward::new(config, var_builder.pp("fusion_mlp"))?;
         
         Ok(Self {
-            text_to_vision_attention,
-            vision_to_text_attention,
-            audio_to_text_attention,
             fusion_norm,
             fusion_projection,
             attention_query,
@@ -955,7 +948,7 @@ impl CrossModalFusion {
             };
             
             // Apply type weighting
-            let _weighted_energy = attention_energy.mul(&Tensor::from_slice(
+            let weighted_energy = attention_energy.mul(&Tensor::from_slice(
                 &[type_weight], (), modality.device()
             )?)?;
             
@@ -966,7 +959,7 @@ impl CrossModalFusion {
         // Step 2: Compute cross-modal attention weights
         let stacked_weights = Tensor::stack(&attention_weights, 0)?;
         let normalized_weights = candle_nn::ops::softmax(&stacked_weights, 0)?;
-        let _weight_vec: Vec<f32> = normalized_weights.to_vec1()?;
+        let weight_vec: Vec<f32> = normalized_weights.to_vec1()?;
         
         // Step 3: Apply attention weights and fuse
         let mut fused_representation = weighted_modalities[0].mul(&Tensor::from_slice(
@@ -974,7 +967,7 @@ impl CrossModalFusion {
         )?)?;
         
         for (i, modality) in weighted_modalities.iter().enumerate().skip(1) {
-            let _weighted_modality = modality.mul(&Tensor::from_slice(
+            let weighted_modality = modality.mul(&Tensor::from_slice(
                 &[weight_vec[i]], (), modality.device()
             )?)?;
             fused_representation = fused_representation.add(&weighted_modality)?;
@@ -1002,7 +995,7 @@ impl MultimodalDecoder {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
         let mut transformer_layers = Vec::new();
         for i in 0..(config.num_layers / 3) {
-            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(&format!("layer_{}", i)))?);
+            transformer_layers.push(TransformerLayer::new(config, var_builder.pp(format!("layer_{i}")))?);
         }
         
         let norm = layer_norm(config.hidden_size, 1e-5, var_builder.pp("norm"))?;
@@ -1045,7 +1038,7 @@ impl TransformerLayer {
 
 impl MultiHeadAttention {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        let _num_heads = config.num_attention_heads;
+        let num_heads = config.num_attention_heads;
         let head_dim = config.hidden_size / num_heads;
         
         let query_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("query"))?;
@@ -1057,27 +1050,39 @@ impl MultiHeadAttention {
     }
     
     fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
-        let _batch_size = query.dim(0)?;
-        let _seq_len = query.dim(1)?;
+        let batch_size = query.dim(0)?;
+        let seq_len = query.dim(1)?;
         
         let q = self.query_proj.forward(query)?;
         let k = self.key_proj.forward(key)?;
         let v = self.value_proj.forward(value)?;
         
-        // Simplified attention (full implementation would handle multi-head properly)
-        let scores = q.matmul(&k.transpose(1, 2)?)?;
+        // Reshape for multi-head attention
+        let q = q.reshape((batch_size, seq_len, self.num_heads, self.head_dim))?
+                 .transpose(1, 2)?;
+        let k = k.reshape((batch_size, seq_len, self.num_heads, self.head_dim))?
+                 .transpose(1, 2)?;
+        let v = v.reshape((batch_size, seq_len, self.num_heads, self.head_dim))?
+                 .transpose(1, 2)?;
+        
+        // Compute attention scores  
+        let scores = q.matmul(&k.transpose(2, 3)?)?;
         let scale = 1.0 / (self.head_dim as f32).sqrt();
         let scaled_scores = scores.mul(&Tensor::from_slice(&[scale], (), query.device())?)?;
-        let attn_weights = candle_nn::ops::softmax(&scaled_scores, 2)?;
+        let attn_weights = candle_nn::ops::softmax(&scaled_scores, 3)?;
         let attn_output = attn_weights.matmul(&v)?;
         
-        Ok(self.output_proj.forward(&attn_output)?)
+        // Reshape back to original dimensions
+        let output = attn_output.transpose(1, 2)?
+                                .reshape((batch_size, seq_len, query.dim(2)?))?;
+        
+        Ok(self.output_proj.forward(&output)?)
     }
 }
 
 impl CrossModalAttention {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        let _num_heads = config.num_attention_heads;
+        let num_heads = config.num_attention_heads;
         
         let query_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("query"))?;
         let key_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("key"))?;
@@ -1155,9 +1160,19 @@ impl PatchEmbedding {
         Ok(Self { conv, patch_size, embed_dim })
     }
     
+    /// Get the patch size used for embedding
+    pub fn patch_size(&self) -> usize {
+        self.patch_size
+    }
+    
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let patches = self.conv.forward(input)?;
         let (batch_size, embed_dim, height, width) = patches.dims4()?;
+        
+        // Validate dimensions match configuration
+        if embed_dim != self.embed_dim {
+            return Err(anyhow::anyhow!("Embed dimension mismatch: expected {}, got {}", self.embed_dim, embed_dim));
+        }
         
         // Flatten patches and transpose
         let flattened = patches.reshape((batch_size, embed_dim, height * width))?;
@@ -1189,7 +1204,7 @@ impl MelSpectrogramProcessor {
                 hidden_size, 
                 kernel_size, 
                 conv_config, 
-                var_builder.pp(&format!("temporal_conv_{}", i))
+                var_builder.pp(format!("temporal_conv_{i}"))
             )?;
             temporal_conv_layers.push(conv);
         }
@@ -1211,7 +1226,7 @@ impl MelSpectrogramProcessor {
                 hidden_size, 
                 kernel_size, 
                 conv_config, 
-                var_builder.pp(&format!("spectral_conv_{}", i))
+                var_builder.pp(format!("spectral_conv_{i}"))
             )?;
             spectral_conv_layers.push(conv);
         }
@@ -1219,7 +1234,7 @@ impl MelSpectrogramProcessor {
         // Layer normalization for each processing stage
         let mut norm_layers = Vec::new();
         for i in 0..6 { // Temporal + spectral + attention stages
-            let norm = layer_norm(hidden_size, 1e-5, var_builder.pp(&format!("norm_{}", i)))?;
+            let norm = layer_norm(hidden_size, 1e-5, var_builder.pp(format!("norm_{i}")))?;
             norm_layers.push(norm);
         }
         
@@ -1229,7 +1244,7 @@ impl MelSpectrogramProcessor {
             let mel_filter = linear(
                 num_mel_bins, 
                 hidden_size, 
-                var_builder.pp(&format!("mel_filter_{}", i))
+                var_builder.pp(format!("mel_filter_{i}"))
             )?;
             mel_filter_banks.push(mel_filter);
         }
@@ -1276,7 +1291,7 @@ impl MelSpectrogramProcessor {
     
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         // Input shape: (batch, time_steps, mel_bins)
-        let (batch_size, time_steps, mel_bins) = input.dims3()?;
+        let (_batch_size, _time_steps, _mel_bins) = input.dims3()?;
         
         // Stage 1: Advanced mel-scale filtering with multiple filter banks
         let mut mel_features = Vec::new();
