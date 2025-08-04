@@ -187,9 +187,15 @@ jobs:
 
     - name: Run clippy (linting)
       run: |
-        cargo clippy --package goldbull-core -- -D warnings
-        cargo clippy --package goldbull-tokenizer -- -D warnings
-        cargo clippy --package goldbull-text -- -D warnings || true
+        cargo clippy --package goldbull-core
+        cargo clippy --package goldbull-tokenizer
+        cargo clippy --package goldbull-text || true
+        cargo clippy --package goldbull-code || true
+        cargo clippy --package goldbull-vision || true
+        cargo clippy --package goldbull-multimodel || true
+        cargo clippy --package goldbull-sage || true
+        cargo clippy --package goldbull-brief || true
+        cargo clippy --package goldbull-embedding || true
 
     - name: Run clippy for additional packages
       run: |

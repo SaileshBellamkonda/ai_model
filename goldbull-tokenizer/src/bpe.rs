@@ -6,7 +6,6 @@ use regex::Regex;
 #[derive(Debug, Clone)]
 pub struct BpeTokenizer {
     config: TokenizerConfig,
-    vocab: HashMap<String, u32>,
     merges: Vec<(String, String)>,
     token_to_id: HashMap<String, u32>,
     id_to_token: HashMap<u32, String>,
@@ -16,25 +15,22 @@ pub struct BpeTokenizer {
 impl BpeTokenizer {
     pub fn new(config: TokenizerConfig) -> Result<Self> {
         // Initialize with BPEmb multilingual vocabulary
-        let mut vocab = HashMap::new();
         let mut token_to_id = HashMap::new();
         let mut id_to_token = HashMap::new();
         
         // Add special tokens first
         for (token, id) in &config.special_tokens {
-            vocab.insert(token.clone(), *id);
             token_to_id.insert(token.clone(), *id);
             id_to_token.insert(*id, token.clone());
         }
         
         // TikToken-style regex pattern for tokenization
         let bpe_regex = Regex::new(
-            r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"
+            r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+"
         ).map_err(|e| goldbull_core::GoldbullError::Tokenizer(e.to_string()))?;
         
         Ok(Self {
             config,
-            vocab,
             merges: Vec::new(),
             token_to_id,
             id_to_token,
@@ -71,7 +67,7 @@ impl BpeTokenizer {
         
         // Convert to bytes and apply BPE merges
         let mut word_tokens: Vec<String> = word.bytes()
-            .map(|b| format!("{:02X}", b))
+            .map(|b| format!("{b:02X}"))
             .collect();
         
         // Apply learned merges
@@ -90,7 +86,7 @@ impl BpeTokenizer {
             }
             
             if let Some((pos, (first, second))) = best_pair {
-                let merged = format!("{}{}", first, second);
+                let merged = format!("{first}{second}");
                 word_tokens[pos] = merged;
                 word_tokens.remove(pos + 1);
             } else {

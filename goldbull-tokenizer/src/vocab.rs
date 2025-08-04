@@ -25,7 +25,7 @@ impl Vocabulary {
         
         // Add basic vocabulary
         for i in 0..vocab_size.min(1000) {
-            let token = format!("token_{}", i);
+            let token = format!("token_{i}");
             vocab.add_token(token);
         }
         
@@ -111,7 +111,7 @@ impl BpeMerges {
     pub fn save(&self, path: &str) -> Result<()> {
         let mut content = String::from("#version: 0.2\n");
         for (first, second) in &self.merges {
-            content.push_str(&format!("{} {}\n", first, second));
+            content.push_str(&format!("{first} {second}\n"));
         }
         std::fs::write(path, content)?;
         Ok(())

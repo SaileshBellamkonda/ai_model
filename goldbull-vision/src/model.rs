@@ -15,8 +15,8 @@ pub struct GoldbullVision {
     feature_extractor: ImageEncoder,
     /// Classification head
     classifier: candle_nn::Linear,
-    /// Variable map for weight management
-    var_map: VarMap,
+    /// Variable map for weight management (maintained for model structure)
+    _var_map: VarMap,
 }
 
 impl std::fmt::Debug for GoldbullVision {
@@ -66,7 +66,7 @@ impl GoldbullVision {
             device,
             feature_extractor,
             classifier,
-            var_map,
+            _var_map: var_map,
         })
     }
     
@@ -147,9 +147,9 @@ impl GoldbullVision {
         let std = [0.229, 0.224, 0.225];  // ImageNet stds
         
         let mut normalized = Vec::with_capacity(normalized_data.len());
-        for i in 0..normalized_data.len() {
+        for (i, &pixel) in normalized_data.iter().enumerate() {
             let channel = i % channels;
-            let norm_pixel = (normalized_data[i] - mean[channel]) / std[channel];
+            let norm_pixel = (pixel - mean[channel]) / std[channel];
             normalized.push(norm_pixel);
         }
         
@@ -188,7 +188,7 @@ impl GoldbullVision {
             let class_name = if *idx < class_names.len() {
                 class_names[*idx].clone()
             } else {
-                format!("class_{}", idx)
+                format!("class_{idx}")
             };
             
             results.push(crate::vision::VisionResult {
@@ -290,7 +290,7 @@ impl GoldbullVision {
     pub fn get_memory_usage(&self) -> usize {
         // Estimate memory usage based on model parameters
         let hidden_size = self.config.hidden_size;
-        let num_layers = self.config.num_layers;
+        let _num_layers = self.config.num_layers;
         
         // Vision models have convolutional layers and transformers
         let conv_params = 64 * 3 * 3 * 3 + 128 * 64 * 3 * 3 + 256 * 128 * 3 * 3 + 512 * 256 * 3 * 3; // Conv layers
@@ -304,7 +304,7 @@ impl GoldbullVision {
 }
 
 impl ImageEncoder {
-    fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
+    fn new(_config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
         let mut layers = Vec::new();
         
         // Progressive feature extraction with increasing channels
@@ -314,7 +314,7 @@ impl ImageEncoder {
             layers.push(ConvBlock::new(
                 *in_channels,
                 *out_channels,
-                var_builder.pp(&format!("layer_{}", i))
+                var_builder.pp(format!("layer_{i}"))
             )?);
         }
         
@@ -331,7 +331,7 @@ impl ImageEncoder {
         }
         
         // Global average pooling
-        let (batch_size, channels, height, width) = x.dims4()?;
+        let (batch_size, channels, _height, _width) = x.dims4()?;
         let pooled = x.mean_keepdim(2)?.mean_keepdim(3)?;
         
         // Flatten for final classification
