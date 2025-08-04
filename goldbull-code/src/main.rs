@@ -533,7 +533,7 @@ async fn analyze_code(
 
 /// Interactive code completion session
 async fn interactive_session(
-    model: &GoldbullCode,
+    _model: &GoldbullCode,
     language: String,
     _syntax_highlighting: bool,
 ) -> Result<()> {
@@ -625,7 +625,7 @@ async fn interactive_session(
 
 /// Benchmark model performance
 async fn benchmark_model(
-    model: &GoldbullCode,
+    _model: &GoldbullCode,
     requests: usize,
     _dataset: Option<String>,
     save_results: Option<String>,

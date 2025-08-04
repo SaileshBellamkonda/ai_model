@@ -267,7 +267,6 @@ pub struct SyntaxAnalyzer {
 }
 
 /// Language-specific syntax patterns and rules
-#[allow(dead_code)]
 #[derive(Debug)]
 struct LanguagePatterns {
     /// Function definition patterns
@@ -902,7 +901,6 @@ impl SyntaxAnalyzer {
     }
     
     /// Create language-specific patterns
-    #[allow(dead_code)]
     fn create_language_patterns(language: LanguageType) -> LanguagePatterns {
         let (function_patterns, variable_patterns, import_patterns, type_patterns, comment_patterns, keywords, operators) = match language {
             LanguageType::Rust => (

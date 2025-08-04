@@ -8,7 +8,6 @@ use crate::completion::{CompletionRequest, CompletionResponse, CompletionEngine}
 
 /// Advanced code generation engine
 /// Combines transformer-based generation with syntax awareness and code intelligence
-#[allow(dead_code)]
 pub struct CodeGenerator<'a> {
     /// Reference to the code completion model
     model: &'a GoldbullCode,
@@ -24,7 +23,6 @@ pub struct CodeGenerator<'a> {
 
 /// Configuration for code generation
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct GenerationConfig {
     /// Maximum number of tokens to generate
     pub max_tokens: usize,
@@ -64,7 +62,6 @@ impl Default for GenerationConfig {
 
 /// Code generation request
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct GenerationRequest {
     /// Input prompt or partial code
     pub prompt: String,
@@ -80,7 +77,6 @@ pub struct GenerationRequest {
 
 /// Additional context for code generation
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct GenerationContext {
     /// File name or identifier
     pub file_name: Option<String>,
@@ -96,7 +92,6 @@ pub struct GenerationContext {
 
 /// Project context information
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ProjectContext {
     /// Project name
     pub name: String,
@@ -112,7 +107,6 @@ pub struct ProjectContext {
 
 /// Code style preferences
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct StylePreferences {
     /// Indentation style (spaces/tabs)
     pub indentation: String,
@@ -155,7 +149,6 @@ pub enum CompletionMode {
 
 /// Code generation response
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct GenerationResponse {
     /// Generated code
     pub code: String,
@@ -172,8 +165,7 @@ pub struct GenerationResponse {
 }
 
 /// Code quality metrics
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct QualityMetrics {
     /// Syntactic correctness (0.0 - 1.0)
     pub syntax_score: f64,
@@ -191,7 +183,6 @@ pub struct QualityMetrics {
 
 /// Syntax validation results
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SyntaxValidation {
     /// Whether code is syntactically valid
     pub is_valid: bool,
@@ -205,7 +196,6 @@ pub struct SyntaxValidation {
 
 /// Syntax error information
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SyntaxError {
     /// Error message
     pub message: String,
@@ -221,7 +211,6 @@ pub struct SyntaxError {
 
 /// Syntax warning information
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SyntaxWarning {
     /// Warning message
     pub message: String,
@@ -235,7 +224,6 @@ pub struct SyntaxWarning {
 
 /// Suggested syntax fix
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SyntaxFix {
     /// Description of the fix
     pub description: String,
@@ -257,8 +245,7 @@ pub enum ErrorSeverity {
 }
 
 /// Alternative code generation
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CodeAlternative {
     /// Alternative code
     pub code: String,
@@ -271,8 +258,7 @@ pub struct CodeAlternative {
 }
 
 /// Generation metadata
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct GenerationMetadata {
     /// Time taken for generation (milliseconds)
     pub generation_time_ms: u64,
@@ -287,7 +273,6 @@ pub struct GenerationMetadata {
 }
 
 /// Code quality validator
-#[allow(dead_code)]
 pub struct QualityValidator {
     /// Language-specific validators
     language_validators: std::collections::HashMap<LanguageType, Box<dyn LanguageValidator>>,
@@ -314,7 +299,6 @@ pub trait LanguageValidator {
 
 /// Universal code quality rule
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct QualityRule {
     /// Rule name
     pub name: String,
@@ -329,7 +313,6 @@ pub struct QualityRule {
 }
 
 /// Syntax-aware post-processor
-#[allow(dead_code)]
 pub struct SyntaxPostProcessor {
     /// Language-specific formatters
     formatters: std::collections::HashMap<LanguageType, Box<dyn CodeFormatter>>,

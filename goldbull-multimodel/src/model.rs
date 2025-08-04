@@ -72,7 +72,6 @@ pub struct GoldbullMultimodel {
     /// Tokenizer for text processing
     tokenizer: BpeTokenizer,
     /// Variable map for weight management (maintained for model structure)
-    #[allow(dead_code)]
     var_map: VarMap,
 }
 
@@ -119,7 +118,6 @@ pub struct AudioModalityEncoder {
 }
 
 /// Cross-modal fusion mechanism
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CrossModalFusion {
     text_to_vision_attention: CrossModalAttention,
@@ -366,15 +364,15 @@ impl GoldbullMultimodel {
     /// Generate image output description from fused representation
     async fn generate_image_output(&self, fused_repr: &Tensor) -> Result<Vec<u8>> {
         let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
-        let _vision_logits = self.vision_output_proj.forward(&decoder_output)?;
+        let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
         
         // Production-grade image generation with latent space sampling and proper decoding
         let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
-        let _vision_logits = self.vision_output_proj.forward(&decoder_output)?;
+        let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
         
         // Convert logits to sophisticated image generation parameters using VAE-style approach
-        let _batch_size = vision_logits.dim(0)?;
-        let _seq_len = vision_logits.dim(1)?;
+        let batch_size = vision_logits.dim(0)?;
+        let seq_len = vision_logits.dim(1)?;
         let feature_dim = vision_logits.dim(2)?;
         
         // Split logits into mean and log variance for proper latent sampling
@@ -477,8 +475,8 @@ impl GoldbullMultimodel {
         let activated = upsampled.gelu()?;
         
         // Step 3: Spatial feature reshaping (simulate 2D structure)
-        let _batch_size = activated.dim(0)?;
-        let _seq_len = activated.dim(1)?;
+        let batch_size = activated.dim(0)?;
+        let seq_len = activated.dim(1)?;
         let features = activated.dim(2)?;
         
         // Reshape to spatial format if possible
@@ -1091,8 +1089,8 @@ impl CrossModalAttention {
     
     /// Forward pass for cross-modal attention
     fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
-        let _batch_size = query.dim(0)?;
-        let _seq_len = query.dim(1)?;
+        let batch_size = query.dim(0)?;
+        let seq_len = query.dim(1)?;
         let head_dim = query.dim(2)? / self.num_heads;
         
         // Reshape for multi-head attention
@@ -1334,11 +1332,10 @@ impl MelSpectrogramProcessor {
         let frequency_enhanced = self.frequency_domain_processor.forward(&spectral_x)?;
         
         // Apply sophisticated frequency domain transformations
-        let _freq_processed = frequency_enhanced.clone();
+        let mut freq_processed = frequency_enhanced.clone();
         
         // Simulate discrete cosine transform (DCT) patterns for spectral analysis
         // Simplified to avoid complex slice operations
-        let _freq_processed = frequency_enhanced.clone();
         freq_processed = self.norm_layers[3].forward(&freq_processed)?;
         
         // Stage 5: Temporal attention for long-range dependencies (simplified)

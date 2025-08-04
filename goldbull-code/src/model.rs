@@ -41,7 +41,7 @@ use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::BpeTokenizer;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+
 
 /// Code completion transformer model with syntax-aware capabilities
 /// 
@@ -163,7 +163,6 @@ enum TopologyType {
     Custom,          // Complex custom topology
 }
 
-#[allow(dead_code)]
 impl GoldbullCode {
     /// Production-grade weight copying between models
     /// 
@@ -289,7 +288,7 @@ impl GoldbullCode {
     }
     
     /// Validate that a tensor was copied correctly
-    fn validate_tensor_copy(&self, source: &candle_core::Tensor, target: &candle_core::Tensor) -> Result<bool> {
+    pub fn validate_tensor_copy(&self, source: &candle_core::Tensor, target: &candle_core::Tensor) -> Result<bool> {
         // 1. Shape validation
         if source.dims() != target.dims() {
             tracing::error!("Shape mismatch: source {:?} vs target {:?}", source.dims(), target.dims());
@@ -361,7 +360,7 @@ impl GoldbullCode {
     }
     
     /// Validate overall weight consistency between models using statistical measures
-    fn validate_weight_consistency(&self, other: &Self) -> Result<f32> {
+    pub fn validate_weight_consistency(&self, other: &Self) -> Result<f32> {
         let mut total_similarity = 0.0f32;
         let mut compared_tensors = 0usize;
         
@@ -438,7 +437,7 @@ impl GoldbullCode {
     }
 
     /// Validate that two models have consistent architecture
-    fn validate_architecture_consistency(&self, other: &Self) -> bool {
+    pub fn validate_architecture_consistency(&self, other: &Self) -> bool {
         // Check core configuration parameters
         if self.config.vocab_size != other.config.vocab_size ||
            self.config.hidden_size != other.config.hidden_size ||
@@ -471,7 +470,7 @@ impl GoldbullCode {
     }
     
     /// Validate that layer dimensions match between models
-    fn validate_layer_dimensions(&self, other: &Self) -> bool {
+    pub fn validate_layer_dimensions(&self, other: &Self) -> bool {
         // Validate embedding layer dimensions
         let self_embedding_dim = self.config.hidden_size;
         let other_embedding_dim = other.config.hidden_size;
@@ -502,7 +501,7 @@ impl GoldbullCode {
     /// 
     /// Production-grade implementation that accesses actual tensors and compares their shapes
     /// using comprehensive tensor introspection and validation
-    fn validate_weight_tensor_shapes(&self, other: &Self) -> bool {
+    pub fn validate_weight_tensor_shapes(&self, other: &Self) -> bool {
         // Production implementation: Access actual tensors and compare their shapes
         
         // Get tensor data from both models' VarMaps
@@ -641,7 +640,7 @@ impl GoldbullCode {
     /// 
     /// Production-grade implementation with comprehensive compatibility checking
     /// including numerical precision, memory layout, and training state validation
-    fn validate_model_state_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_model_state_compatibility(&self, other: &Self) -> bool {
         // 1. Validate numerical precision compatibility
         if !self.validate_numerical_precision_compatibility(other) {
             tracing::warn!("Numerical precision compatibility validation failed");
@@ -698,7 +697,7 @@ impl GoldbullCode {
     /// Validate numerical precision compatibility between models
     /// 
     /// Checks that both models use compatible data types and numerical precision
-    fn validate_numerical_precision_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_numerical_precision_compatibility(&self, other: &Self) -> bool {
         // Access tensors from both models to check dtypes
         let self_data = self.var_map.data().lock().unwrap();
         let other_data = other.var_map.data().lock().unwrap();
@@ -746,7 +745,7 @@ impl GoldbullCode {
     /// Validate memory layout compatibility between models
     /// 
     /// Checks tensor memory layouts and strides for compatibility
-    fn validate_memory_layout_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_memory_layout_compatibility(&self, other: &Self) -> bool {
         let self_data = self.var_map.data().lock().unwrap();
         let other_data = other.var_map.data().lock().unwrap();
         
@@ -783,7 +782,7 @@ impl GoldbullCode {
     /// Validate gradient state compatibility between models
     /// 
     /// Ensures gradient requirements and tracking states are compatible
-    fn validate_gradient_state_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_gradient_state_compatibility(&self, other: &Self) -> bool {
         let self_data = self.var_map.data().lock().unwrap();
         let other_data = other.var_map.data().lock().unwrap();
         
@@ -832,7 +831,7 @@ impl GoldbullCode {
     /// Validate training/inference mode compatibility between models
     /// 
     /// Checks model training states and batch norm/dropout behavior
-    fn validate_training_mode_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_training_mode_compatibility(&self, other: &Self) -> bool {
         // In candle, training vs inference mode is typically handled at the module level
         // For transformer models, this mainly affects dropout and layer norm behavior
         
@@ -877,7 +876,7 @@ impl GoldbullCode {
     /// Validate attention pattern compatibility between models
     /// 
     /// Ensures attention mechanisms and patterns are compatible
-    fn validate_attention_pattern_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_attention_pattern_compatibility(&self, other: &Self) -> bool {
         // Check attention-related configuration parameters
         if self.config.num_attention_heads != other.config.num_attention_heads {
             tracing::warn!("Number of attention heads mismatch: {} vs {}", 
@@ -909,7 +908,7 @@ impl GoldbullCode {
     /// Validate layer normalization epsilon compatibility between models
     /// 
     /// Checks that layer norm epsilon values are compatible to prevent numerical instability
-    fn validate_layer_norm_epsilon_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_layer_norm_epsilon_compatibility(&self, other: &Self) -> bool {
         // Get layer norm epsilon from configuration
         let self_epsilon = self.config.layer_norm_eps;
         let other_epsilon = other.config.layer_norm_eps;
@@ -935,7 +934,7 @@ impl GoldbullCode {
     /// Validate activation function compatibility between models
     /// 
     /// Ensures activation functions used in feed-forward networks are compatible
-    fn validate_activation_function_compatibility(&self, other: &Self) -> bool {
+    pub fn validate_activation_function_compatibility(&self, other: &Self) -> bool {
         // Since activation function is not explicitly stored in config,
         // we infer it from the model type and validate consistency
         
@@ -966,7 +965,7 @@ impl GoldbullCode {
     }
     
     /// Check if devices are compatible for model operations
-    fn device_compatible(&self, other_device: &Device) -> bool {
+    pub fn device_compatible(&self, other_device: &Device) -> bool {
         // Production-grade device compatibility checking
         match (&self.device, other_device) {
             (Device::Cpu, Device::Cpu) => true,
@@ -994,7 +993,7 @@ impl GoldbullCode {
     }
     
     /// Compare two tensors element-wise with specified tolerance
-    fn compare_tensors_with_tolerance(&self, tensor1: &Tensor, tensor2: &Tensor, tolerance: f64) -> bool {
+    pub fn compare_tensors_with_tolerance(&self, tensor1: &Tensor, tensor2: &Tensor, tolerance: f64) -> bool {
         // Convert tensors to comparable format
         let data1 = match tensor1.to_vec1::<f32>() {
             Ok(data) => data,
@@ -1032,7 +1031,7 @@ impl GoldbullCode {
     }
     
     /// Validate statistical properties of tensors
-    fn validate_tensor_statistics(&self, tensor1: &Tensor, tensor2: &Tensor, name: &str) -> bool {
+    pub fn validate_tensor_statistics(&self, tensor1: &Tensor, tensor2: &Tensor, name: &str) -> bool {
         let data1 = match tensor1.to_vec1::<f32>() {
             Ok(data) => data,
             Err(_) => return false,
@@ -1071,7 +1070,7 @@ impl GoldbullCode {
     }
     
     /// Calculate mean and standard deviation of a vector
-    fn calculate_mean_std(&self, data: &[f32]) -> (f32, f32) {
+    pub fn calculate_mean_std(&self, data: &[f32]) -> (f32, f32) {
         let mean = data.iter().sum::<f32>() / data.len() as f32;
         let variance = data.iter()
             .map(|x| (x - mean).powi(2))
@@ -1081,7 +1080,7 @@ impl GoldbullCode {
     }
     
     /// Create a fallback clone when primary cloning fails
-    fn create_fallback_clone(&self) -> Self {
+    pub fn create_fallback_clone(&self) -> Self {
         tracing::warn!("Creating fallback clone - weights will be randomly initialized");
         
         // Create a new model with the same configuration
@@ -1092,7 +1091,7 @@ impl GoldbullCode {
     }
     
     /// Count total parameters in the model
-    fn count_parameters(&self) -> usize {
+    pub fn count_parameters(&self) -> usize {
         let mut count = 0;
         
         // Count embedding parameters
@@ -1131,7 +1130,7 @@ impl GoldbullCode {
     /// 
     /// Performs comprehensive validation of embedding tensors including
     /// actual tensor shapes, memory layout, and dimensional consistency
-    fn validate_embedding_shapes(&self, other: &Self) -> bool {
+    pub fn validate_embedding_shapes(&self, other: &Self) -> bool {
         // Get embedding tensors from var_maps
         let self_vars = {
             let data = self.var_map.data().lock().unwrap();
@@ -1239,7 +1238,7 @@ impl GoldbullCode {
     }
     
     /// Validate tensor memory layout and stride consistency
-    fn validate_tensor_layout(&self, tensor1: &Tensor, tensor2: &Tensor, name: &str) -> bool {
+    pub fn validate_tensor_layout(&self, tensor1: &Tensor, tensor2: &Tensor, name: &str) -> bool {
         // Check if tensors have consistent contiguity
         let contiguous1 = tensor1.is_contiguous();
         let contiguous2 = tensor2.is_contiguous();
@@ -1272,7 +1271,7 @@ impl GoldbullCode {
     }
     
     /// Validate transformer block shapes
-    fn validate_transformer_shapes(&self, other: &Self) -> bool {
+    pub fn validate_transformer_shapes(&self, other: &Self) -> bool {
         // Validate that transformer configurations match
         self.config.num_layers == other.config.num_layers &&
         self.config.num_attention_heads == other.config.num_attention_heads &&
@@ -1280,7 +1279,7 @@ impl GoldbullCode {
     }
     
     /// Validate output projection shapes
-    fn validate_output_shapes(&self, other: &Self) -> bool {
+    pub fn validate_output_shapes(&self, other: &Self) -> bool {
         self.config.hidden_size == other.config.hidden_size &&
         self.config.vocab_size == other.config.vocab_size
     }
@@ -1616,7 +1615,7 @@ impl GoldbullCode {
     
     /// Validate CUDA compute capability compatibility
     #[cfg(feature = "cuda")]
-    fn validate_compute_capabilities(&self, device1: &candle_core::CudaDevice, device2: &candle_core::CudaDevice) -> bool {
+    pub fn validate_compute_capabilities(&self, device1: &candle_core::CudaDevice, device2: &candle_core::CudaDevice) -> bool {
         // Get compute capability versions for both devices
         let capability1 = self.get_compute_capability(device1);
         let capability2 = self.get_compute_capability(device2);
@@ -2432,19 +2431,6 @@ impl P2PTopology {
     }
 }
 
-/// Results of GPU connectivity pattern analysis
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-struct ConnectivityAnalysis {
-    /// Number of detected connectivity domains (e.g., NUMA nodes, NVLink islands)
-    num_domains: usize,
-    /// Variance in bandwidth measurements (indicates mixed connection types)
-    bandwidth_variance: f64,
-    /// Connectivity ratio within detected groups
-    intra_group_connectivity: f64,
-    /// Connectivity ratio between detected groups
-    inter_group_connectivity: f64,
-}
 
 /// Transformer block specialized for code completion
 /// Includes syntax-aware attention and code structure understanding
@@ -2479,7 +2465,6 @@ pub struct CodeAttention {
     /// Head dimension size
     head_dim: usize,
     /// Attention dropout rate
-    #[allow(dead_code)]
     dropout_rate: f64,
 }
 
@@ -2492,10 +2477,8 @@ pub struct CodeFeedForward {
     /// Second linear transformation (contraction)
     linear2: candle_nn::Linear,
     /// Intermediate size for expansion
-    #[allow(dead_code)]
     intermediate_size: usize,
     /// Dropout rate for regularization
-    #[allow(dead_code)]
     dropout_rate: f64,
 }
 

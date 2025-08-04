@@ -26,7 +26,6 @@ pub struct Trainer {
     /// Training metrics tracker
     metrics: TrainingMetrics,
     /// Optimizer for model parameters
-    #[allow(dead_code)]
     optimizer: CodeOptimizer,
     /// Learning rate scheduler
     scheduler: LearningRateScheduler,
@@ -146,7 +145,6 @@ impl Default for EarlyStoppingConfig {
 /// Code dataset loader and processor
 /// Handles multiple programming languages and code-specific preprocessing
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct CodeDataset {
     /// Code samples with language information
     samples: Vec<CodeSample>,
@@ -195,7 +193,6 @@ pub struct DatasetMetadata {
 }
 
 /// Language-specific code processor
-#[allow(dead_code)]
 pub struct CodeProcessor {
     /// Language type
     language: LanguageType,
@@ -229,7 +226,6 @@ pub struct TokenizationRules {
 }
 
 /// Code quality validator for training data
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct QualityValidator {
     /// Minimum code quality threshold
@@ -304,7 +300,6 @@ impl Default for TrainingMetrics {
 }
 
 /// Optimizer for code model training
-#[allow(dead_code)]
 pub struct CodeOptimizer {
     /// Optimizer type (Adam, AdamW, SGD)
     optimizer_type: OptimizerType,
@@ -366,7 +361,6 @@ pub enum SchedulerType {
 }
 
 /// Checkpoint manager for model saving and loading
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CheckpointManager {
     /// Checkpoint directory

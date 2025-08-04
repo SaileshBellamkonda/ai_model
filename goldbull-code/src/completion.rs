@@ -5,7 +5,6 @@ use std::collections::HashMap;
 
 /// Request for code completion
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct CompletionRequest {
     /// Code prefix before cursor
     pub prefix: String,
@@ -51,7 +50,6 @@ impl Default for CompletionRequest {
 
 /// Response from code completion
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct CompletionResponse {
     /// Generated code completion
     pub completion: String,
@@ -71,7 +69,6 @@ pub struct CompletionResponse {
 
 /// Alternative completion option
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct CompletionAlternative {
     /// Alternative completion text
     pub completion: String,
@@ -83,7 +80,6 @@ pub struct CompletionAlternative {
 
 /// Code quality metrics for completion
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct QualityMetrics {
     /// Code style consistency score (0.0 - 1.0)
     pub style_consistency: f64,
@@ -101,7 +97,6 @@ pub struct QualityMetrics {
 
 /// Context file for enhanced completion
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct ContextFile {
     /// File path relative to project root
     pub path: String,
@@ -132,7 +127,6 @@ pub enum CompletionMode {
 
 /// Hints to guide code completion
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-#[allow(dead_code)]
 pub struct CompletionHints {
     /// Expected return type if known
     pub expected_type: Option<String>,
@@ -152,7 +146,6 @@ pub struct CompletionHints {
 
 /// Variable available in current scope
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct ScopeVariable {
     /// Variable name
     pub name: String,
@@ -166,7 +159,6 @@ pub struct ScopeVariable {
 
 /// Function available in current scope
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct ScopeFunction {
     /// Function name
     pub name: String,
@@ -182,7 +174,6 @@ pub struct ScopeFunction {
 
 /// Current code context information
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct CodeContext {
     /// Current function name if inside one
     pub current_function: Option<String>,
@@ -219,7 +210,6 @@ impl Default for CodeContext {
 
 /// Style preferences for code completion
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[allow(dead_code)]
 pub struct StylePreferences {
     /// Preferred indentation (spaces or tabs)
     pub indentation: String,
@@ -252,7 +242,6 @@ impl Default for StylePreferences {
 }
 
 /// Code completion engine with context awareness
-#[allow(dead_code)]
 pub struct CompletionEngine {
     /// Syntax analyzers for different languages
     analyzers: HashMap<LanguageType, SyntaxAnalyzer>,
@@ -266,7 +255,6 @@ pub struct CompletionEngine {
 
 /// Database of common code patterns
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct PatternDatabase {
     /// Function patterns by language
     function_patterns: HashMap<LanguageType, Vec<FunctionPattern>>,
@@ -280,7 +268,6 @@ pub struct PatternDatabase {
 
 /// Function implementation pattern
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct FunctionPattern {
     /// Pattern name
     pub name: String,
@@ -296,7 +283,6 @@ pub struct FunctionPattern {
 
 /// Type definition pattern
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct TypePattern {
     /// Pattern name
     pub name: String,
@@ -312,7 +298,6 @@ pub struct TypePattern {
 
 /// Language idiom pattern
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct IdiomPattern {
     /// Idiom name
     pub name: String,
@@ -328,7 +313,6 @@ pub struct IdiomPattern {
 
 /// Error handling pattern
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct ErrorPattern {
     /// Pattern name
     pub name: String,
@@ -344,7 +328,6 @@ pub struct ErrorPattern {
 
 /// Template engine for code generation
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct TemplateEngine {
     /// Template cache
     templates: HashMap<String, String>,
@@ -354,7 +337,6 @@ pub struct TemplateEngine {
 
 /// Code quality checker
 #[derive(Debug)]
-#[allow(dead_code)]
 pub struct QualityChecker {
     /// Style rules by language
     style_rules: HashMap<LanguageType, Vec<StyleRule>>,
@@ -366,7 +348,6 @@ pub struct QualityChecker {
 
 /// Style checking rule
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct StyleRule {
     /// Rule name
     pub name: String,
@@ -382,7 +363,6 @@ pub struct StyleRule {
 
 /// Security checking rule
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct SecurityRule {
     /// Rule name
     pub name: String,
@@ -398,7 +378,6 @@ pub struct SecurityRule {
 
 /// Performance checking rule
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct PerformanceRule {
     /// Rule name
     pub name: String,
@@ -855,7 +834,6 @@ impl CompletionEngine {
 // Helper types for internal processing
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct AnalyzedContext {
     features: CodeFeatures,
     cursor_context: CursorContext,
@@ -863,7 +841,6 @@ struct AnalyzedContext {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct CursorContext {
     line_number: usize,
     column_number: usize,
@@ -886,7 +863,6 @@ enum CompletionType {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct ScopeInfo {
     variables: Vec<ScopeVariable>,
     functions: Vec<ScopeFunction>,
@@ -901,7 +877,6 @@ enum CompletionPattern {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 struct CompletionCandidate {
     text: String,
     confidence: f64,

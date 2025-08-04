@@ -66,7 +66,7 @@ mod tests {
         "#;
         
         let features = analyze_code(code, LanguageType::Rust).unwrap();
-        assert!(features.functions.len() > 0);
+        assert!(!features.functions.is_empty());
         assert_eq!(features.language, LanguageType::Rust);
     }
 }

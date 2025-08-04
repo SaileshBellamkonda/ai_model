@@ -4,11 +4,12 @@ pub mod multimodal;
 
 pub use model::GoldbullMultimodel;
 pub use training::Trainer;
-pub use multimodal::{MultimodalRequest, MultimodalResponse, ModalityType};
+pub use multimodal::{MultimodalRequest, MultimodalResponse, ModalityType, ModalityInput, InputModality};
 
 use anyhow::Result;
 use goldbull_core::ModelConfig;
 use candle_core::Device;
+use std::collections::HashMap;
 
 /// Create a new multimodal AI model with default configuration
 pub fn new_multimodal_model(device: Device) -> Result<GoldbullMultimodel> {
@@ -33,11 +34,18 @@ mod tests {
         let model = new_multimodal_model(Device::Cpu).unwrap();
         
         let request = MultimodalRequest {
-            text: Some("Describe this image".to_string()),
-            image_data: Some(vec![0u8; 224 * 224 * 3]),
-            audio_data: None,
-            modalities: vec![ModalityType::Text, ModalityType::Vision],
-            ..Default::default()
+            inputs: vec![
+                ModalityInput {
+                    modality: InputModality::Text { content: "Describe this image".to_string() },
+                    metadata: HashMap::new(),
+                },
+                ModalityInput {
+                    modality: InputModality::Image { data: vec![0u8; 224 * 224 * 3] },
+                    metadata: HashMap::new(),
+                },
+            ],
+            output_modalities: vec![ModalityType::Text, ModalityType::Vision],
+            options: HashMap::new(),
         };
         
         let response = process_multimodal(&model, request).await.unwrap();
