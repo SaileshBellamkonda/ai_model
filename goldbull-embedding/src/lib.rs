@@ -58,7 +58,7 @@ mod tests {
         let request = SimilarityRequest {
             text1: "Machine learning is amazing".to_string(),
             text2: "AI and ML are fascinating".to_string(),
-            similarity_metric: embeddings::SimilarityMetric::Cosine,
+            metric: embeddings::SimilarityMetric::Cosine,
         };
         
         let response = calculate_similarity(&model, request).await.unwrap();

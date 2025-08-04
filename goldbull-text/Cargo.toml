@@ -20,7 +20,7 @@ path = "src/train.rs"
 [dependencies]
 goldbull-core = { path = "../goldbull-core" }
 goldbull-tokenizer = { path = "../goldbull-tokenizer" }
-# goldbull-code = { path = "../goldbull-code" }  # excluded due to compilation issues
+goldbull-code = { path = "../goldbull-code" }
 goldbull-vision = { path = "../goldbull-vision" }
 anyhow.workspace = true
 thiserror.workspace = true
