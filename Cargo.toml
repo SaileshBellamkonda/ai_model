@@ -46,7 +46,7 @@ regex = "1.10"
 base64 = "0.21"
 
 # Data processing
-hf-hub = { version = "0.4", default-features = false, features = ["tokio"] }
+hf-hub = { version = "0.4.3", default-features = false, features = ["tokio"] }
 memmap2 = "0.9"
 rayon = "1.8"
 num_cpus = "1.16"
@@ -75,6 +75,9 @@ walkdir = "2.4"
 chrono = { version = "0.4", features = ["serde"] }
 
 # TLS provider configuration
-rustls = { version = "0.23", default-features = false, features = ["aws-lc-rs", "logging", "std", "tls12"] }
+rustls = { version = "0.23.31", default-features = false, features = ["aws-lc-rs", "logging", "std", "tls12"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["tls12"] }
 hyper-rustls = { version = "0.27", default-features = false, features = ["aws-lc-rs", "http1", "http2", "tls12"] }
+
+# Security fix: Force ring upgrade to fix RUSTSEC-2025-0009
+ring = "0.17.14"
