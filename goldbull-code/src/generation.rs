@@ -2,6 +2,7 @@ use anyhow::Result;
 use candle_core::{Tensor, IndexOp};
 use goldbull_tokenizer::Tokenizer;
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use crate::syntax::LanguageType;
 use crate::model::GoldbullCode;
 use crate::completion::{CompletionRequest, CompletionResponse, CompletionEngine};
@@ -76,7 +77,7 @@ pub struct GenerationRequest {
 }
 
 /// Additional context for code generation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GenerationContext {
     /// File name or identifier
     pub file_name: Option<String>,
@@ -182,7 +183,7 @@ pub struct QualityMetrics {
 }
 
 /// Syntax validation results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxValidation {
     /// Whether code is syntactically valid
     pub is_valid: bool,
@@ -195,7 +196,7 @@ pub struct SyntaxValidation {
 }
 
 /// Syntax error information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxError {
     /// Error message
     pub message: String,
@@ -210,7 +211,7 @@ pub struct SyntaxError {
 }
 
 /// Syntax warning information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxWarning {
     /// Warning message
     pub message: String,
@@ -223,7 +224,7 @@ pub struct SyntaxWarning {
 }
 
 /// Suggested syntax fix
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxFix {
     /// Description of the fix
     pub description: String,
@@ -236,7 +237,7 @@ pub struct SyntaxFix {
 }
 
 /// Error severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ErrorSeverity {
     Error,
     Warning,

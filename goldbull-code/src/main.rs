@@ -6,8 +6,8 @@ use goldbull_code::{
     generation::{GenerationRequest, GenerationConfig, GenerationContext, CompletionMode, StylePreferences},
     syntax::{LanguageType, SyntaxAnalyzer},
 };
-use goldbull_core::{ModelConfig, Device, utils::get_available_memory};
-use serde_json;
+use goldbull_core::ModelConfig;
+use candle_core::Device;
 use std::{fs, io::{self, Write}, time::Instant};
 use tracing::{info, error};
 use tracing_subscriber;
@@ -182,16 +182,12 @@ async fn main() -> Result<()> {
     
     info!("Starting Goldbull Code Completion CLI");
     
-    // Check available memory
-    let available_memory = get_available_memory();
-    info!("Available system memory: {} MB", available_memory / 1024 / 1024);
+    // Check device availability
+    let device = Device::Cpu;
+    info!("Using CPU for inference");
     
     if let Some(max_memory) = cli.max_memory {
-        if available_memory / 1024 / 1024 < max_memory {
-            error!("Insufficient memory. Available: {} MB, Required: {} MB", 
-                available_memory / 1024 / 1024, max_memory);
-            std::process::exit(1);
-        }
+        info!("Memory limit requested: {} MB", max_memory);
     }
     
     // Initialize device
@@ -280,7 +276,7 @@ async fn load_model(cli: &Cli, device: Device) -> Result<GoldbullCode> {
 
 /// Complete code based on context
 async fn complete_code(
-    model: &GoldbullCode,
+    _model: &GoldbullCode,
     prefix: String,
     suffix: Option<String>,
     language: String,
@@ -407,7 +403,7 @@ async fn generate_code(
     };
     
     // Generate code
-    let mut generator = CodeGenerator::new(model.clone())?;
+    let mut generator = CodeGenerator::new(&model)?;
     let response = generator.generate(request).await?;
     
     let generation_time = start_time.elapsed();

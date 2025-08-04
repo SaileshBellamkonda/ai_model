@@ -41,6 +41,7 @@ use candle_nn::{embedding, linear, layer_norm, VarBuilder, VarMap};
 use goldbull_core::ModelConfig;
 use goldbull_tokenizer::BpeTokenizer;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 
 /// Code completion transformer model with syntax-aware capabilities
