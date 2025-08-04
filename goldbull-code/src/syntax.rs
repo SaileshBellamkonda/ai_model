@@ -298,7 +298,10 @@ impl SyntaxAnalyzer {
         
         // Set language-specific grammar
         let tree_sitter_language = match language {
-            LanguageType::Rust => tree_sitter_rust::language(),
+            LanguageType::Rust => {
+                // Temporary workaround for tree-sitter version conflict
+                return Err(anyhow::anyhow!("Rust analysis temporarily unavailable due to tree-sitter version conflict"));
+            },
             LanguageType::Python => tree_sitter_python::language(),
             LanguageType::JavaScript => tree_sitter_javascript::language(),
             LanguageType::TypeScript => tree_sitter_typescript::language_typescript(),
