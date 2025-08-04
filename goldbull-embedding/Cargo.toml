@@ -39,3 +39,6 @@ reqwest.workspace = true
 rustls.workspace = true
 tokio-rustls.workspace = true
 hyper-rustls.workspace = true
+
+# Security fix: Force ring upgrade to fix RUSTSEC-2025-0009
+ring.workspace = true
