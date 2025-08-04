@@ -58,12 +58,25 @@ jobs:
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
 
+    - name: Build additional libraries
+      run: |
+        cargo build --release --target ${{ matrix.target }} --package goldbull-brief
+        cargo build --release --target ${{ matrix.target }} --package goldbull-vision
+        cargo build --release --target ${{ matrix.target }} --package goldbull-sage
+        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
+        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
+      continue-on-error: true
+
     - name: Build goldbull-text binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
       continue-on-error: true
 
     - name: Build goldbull-code binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
+      continue-on-error: true
+
+    - name: Build goldbull-sage binary
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-sage
       continue-on-error: true
 
     - name: Create release directory
@@ -76,14 +89,14 @@ jobs:
       shell: bash
       run: |
         # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-cli" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-train" release/${{ matrix.artifact_name }}/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist
@@ -103,14 +116,14 @@ jobs:
       shell: bash
       run: |
         # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-cli.exe" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" release/${{ matrix.artifact_name }}/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text.exe" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage.exe" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist
@@ -148,7 +161,7 @@ jobs:
         asset_content_type: application/zip
 
     - name: Upload build artifacts (Unix)
-      if: runner.os != 'Windows'
+      if: always() && runner.os != 'Windows'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}-release
@@ -156,7 +169,7 @@ jobs:
         retention-days: 90
 
     - name: Upload build artifacts (Windows)
-      if: runner.os == 'Windows'
+      if: always() && runner.os == 'Windows'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.artifact_name }}-release

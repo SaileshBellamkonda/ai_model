@@ -17,14 +17,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Test one configuration per OS
+          # Linux x86_64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: goldbull-nightly-linux
+            artifact_name: goldbull-nightly-linux-amd64
             
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: goldbull-nightly-linux-arm64
+            
+          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: goldbull-nightly-windows
+            artifact_name: goldbull-nightly-windows-amd64
+            
+          # Windows ARM64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            artifact_name: goldbull-nightly-windows-arm64
 
     steps:
     - name: Checkout code
@@ -35,22 +46,74 @@ jobs:
       with:
         targets: ${{ matrix.target }}
 
+    - name: Install cross-compilation dependencies (Linux ARM64)
+      if: matrix.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-aarch64-linux-gnu
+
     - name: Build all packages
       run: |
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
         cargo build --release --target ${{ matrix.target }} --package goldbull-text || echo "goldbull-text build failed"
         cargo build --release --target ${{ matrix.target }} --package goldbull-code || echo "goldbull-code build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-brief || echo "goldbull-brief build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-vision || echo "goldbull-vision build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel build failed"
 
     - name: Run tests
       run: |
         cargo test --target ${{ matrix.target }} --package goldbull-core
         cargo test --target ${{ matrix.target }} --package goldbull-tokenizer
         cargo test --target ${{ matrix.target }} --package goldbull-text || echo "goldbull-text tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-brief || echo "goldbull-brief tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-vision || echo "goldbull-vision tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel tests failed"
+
+    - name: Prepare nightly artifacts
+      shell: bash
+      run: |
+        mkdir -p nightly-artifacts
+        
+    - name: Copy binaries (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        # Copy binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage" nightly-artifacts/
+        fi
+        
+    - name: Copy binaries (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        # Copy binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text.exe" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code.exe" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage.exe" nightly-artifacts/
+        fi
 
     - name: Upload nightly artifacts
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: ${{ matrix.artifact_name }}
-        path: target/${{ matrix.target }}/release/
+        path: nightly-artifacts/
         retention-days: 7
