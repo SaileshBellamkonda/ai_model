@@ -39,7 +39,7 @@ impl TikTokenizer {
         
         // TikToken's cl100k_base regex pattern for text splitting
         let tiktoken_regex = Regex::new(
-            r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+(?!\S)|\s+"
+            r"(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{L}+|\p{N}{1,3}| ?[^\s\p{L}\p{N}]+[\r\n]*|\s*[\r\n]+|\s+"
         ).map_err(|e| goldbull_core::GoldbullError::Tokenizer(e.to_string()))?;
         
         Ok(Self {
@@ -53,16 +53,20 @@ impl TikTokenizer {
     
     pub fn cl100k_base() -> Result<Self> {
         // Create a TikToken-style tokenizer similar to GPT-4's cl100k_base
-        let mut config = TokenizerConfig::default();
-        config.vocab_size = 100257; // cl100k_base vocab size
+        let config = TokenizerConfig {
+            vocab_size: 100257, // cl100k_base vocab size
+            ..Default::default()
+        };
         
         Self::new(config)
     }
     
     pub fn p50k_base() -> Result<Self> {
         // Create a TikToken-style tokenizer similar to GPT-3's p50k_base
-        let mut config = TokenizerConfig::default();
-        config.vocab_size = 50281; // p50k_base vocab size
+        let config = TokenizerConfig {
+            vocab_size: 50281, // p50k_base vocab size
+            ..Default::default()
+        };
         
         Self::new(config)
     }
@@ -70,7 +74,7 @@ impl TikTokenizer {
     pub fn from_tiktoken_file(path: &str) -> Result<Self> {
         // Load from .tiktoken file format
         let content = std::fs::read_to_string(path)
-            .map_err(|e| goldbull_core::GoldbullError::Io(e))?;
+            .map_err(goldbull_core::GoldbullError::Io)?;
         
         let mut vocab = HashMap::new();
         let mut max_id = 0;
@@ -89,8 +93,10 @@ impl TikTokenizer {
             }
         }
         
-        let mut config = TokenizerConfig::default();
-        config.vocab_size = (max_id + 1) as usize;
+        let config = TokenizerConfig {
+            vocab_size: (max_id + 1) as usize,
+            ..Default::default()
+        };
         
         Self::new(config)
     }
