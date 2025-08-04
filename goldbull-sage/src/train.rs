@@ -252,8 +252,7 @@ fn create_sample_dataset(data_path: &str, tokenizer: BpeTokenizer) -> Result<QAD
         let mut dataset = QADataset::from_json_file(path, tokenizer)?;
         
         // Take only first 100 samples for sample training
-        let samples = dataset.samples.into_iter().take(100).collect();
-        dataset.samples = samples;
+        dataset.take_samples(100);
         
         Ok(dataset)
     } else {

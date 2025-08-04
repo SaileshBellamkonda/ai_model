@@ -137,6 +137,23 @@ impl QADataset {
         self.samples.push(sample);
     }
     
+    /// Get samples (for sample training - take first N)
+    pub fn take_samples(&mut self, count: usize) {
+        if self.samples.len() > count {
+            self.samples.truncate(count);
+        }
+    }
+    
+    /// Get number of samples
+    pub fn len(&self) -> usize {
+        self.samples.len()
+    }
+    
+    /// Check if dataset is empty
+    pub fn is_empty(&self) -> bool {
+        self.samples.is_empty()
+    }
+    
     /// Get the next batch of training data
     pub fn next_batch(&mut self, batch_size: usize) -> Result<Option<QABatch>> {
         let start_idx = self.current_batch * batch_size;
@@ -414,16 +431,6 @@ impl QADataset {
     /// Reset batch iterator
     pub fn reset_batches(&mut self) {
         self.current_batch = 0;
-    }
-    
-    /// Get dataset size
-    pub fn len(&self) -> usize {
-        self.samples.len()
-    }
-    
-    /// Check if dataset is empty
-    pub fn is_empty(&self) -> bool {
-        self.samples.is_empty()
     }
 }
 

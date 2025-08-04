@@ -4,7 +4,7 @@ members = [
     "goldbull-core",
     "goldbull-tokenizer",
     "goldbull-text",
-    "goldbull-code",
+    # "goldbull-code",  # temporarily excluded due to tree-sitter version conflict
     "goldbull-sage",
     "goldbull-brief",
     "goldbull-vision",

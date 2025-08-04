@@ -8,10 +8,19 @@ repository.workspace = true
 homepage.workspace = true
 description = "Text generation model for goldbull AI suite"
 
+# Define binary targets
+[[bin]]
+name = "goldbull-text"
+path = "src/main.rs"
+
+[[bin]]
+name = "goldbull-text-train"
+path = "src/train.rs"
+
 [dependencies]
 goldbull-core = { path = "../goldbull-core" }
 goldbull-tokenizer = { path = "../goldbull-tokenizer" }
-goldbull-code = { path = "../goldbull-code" }
+# goldbull-code = { path = "../goldbull-code" }  # temporarily excluded due to tree-sitter version conflict
 goldbull-vision = { path = "../goldbull-vision" }
 anyhow.workspace = true
 thiserror.workspace = true
