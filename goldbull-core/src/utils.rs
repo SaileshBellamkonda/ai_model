@@ -274,7 +274,7 @@ pub fn get_optimal_batch_size(model_size: usize, sequence_length: usize) -> usiz
     // Consider CPU cores for parallel processing
     let cpu_optimal = std::cmp::min(system_resources.cpu_cores * 2, 16);
     
-    std::cmp::max(1, std::cmp::min(max_batch_size, cpu_optimal))
+    max_batch_size.clamp(1, cpu_optimal)
 }
 
 /// Get optimal thread count for CPU operations
