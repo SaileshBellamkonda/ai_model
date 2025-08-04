@@ -75,6 +75,15 @@ jobs:
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
 
+    - name: Build additional libraries
+      run: |
+        cargo build --release --target ${{ matrix.target }} --package goldbull-brief
+        cargo build --release --target ${{ matrix.target }} --package goldbull-vision
+        cargo build --release --target ${{ matrix.target }} --package goldbull-sage
+        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
+        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
+      continue-on-error: true
+
     - name: Build goldbull-text binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
       continue-on-error: true
@@ -93,14 +102,14 @@ jobs:
       shell: bash
       run: |
         # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-cli" artifacts/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-train" artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text" artifacts/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage" artifacts/
         fi
         
     - name: Copy binaries (Windows)
@@ -108,14 +117,14 @@ jobs:
       shell: bash
       run: |
         # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-cli.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-cli.exe" artifacts/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text.exe" artifacts/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage.exe" artifacts/
         fi
 
     - name: Upload build artifacts
@@ -130,6 +139,15 @@ jobs:
       run: |
         cargo test --target ${{ matrix.target }} --package goldbull-core
         cargo test --target ${{ matrix.target }} --package goldbull-tokenizer
+      continue-on-error: true
+
+    - name: Test additional libraries
+      run: |
+        cargo test --target ${{ matrix.target }} --package goldbull-brief
+        cargo test --target ${{ matrix.target }} --package goldbull-vision
+        cargo test --target ${{ matrix.target }} --package goldbull-sage
+        cargo test --target ${{ matrix.target }} --package goldbull-embedding
+        cargo test --target ${{ matrix.target }} --package goldbull-multimodel
       continue-on-error: true
 
   test:
@@ -159,11 +177,27 @@ jobs:
         cargo test --package goldbull-tokenizer
         cargo test --package goldbull-text || true
 
+    - name: Run tests for additional packages
+      run: |
+        cargo test --package goldbull-brief || true
+        cargo test --package goldbull-vision || true
+        cargo test --package goldbull-sage || true
+        cargo test --package goldbull-embedding || true
+        cargo test --package goldbull-multimodel || true
+
     - name: Run clippy (linting)
       run: |
         cargo clippy --package goldbull-core -- -D warnings
         cargo clippy --package goldbull-tokenizer -- -D warnings
         cargo clippy --package goldbull-text -- -D warnings || true
+
+    - name: Run clippy for additional packages
+      run: |
+        cargo clippy --package goldbull-brief -- -D warnings || true
+        cargo clippy --package goldbull-vision -- -D warnings || true
+        cargo clippy --package goldbull-sage -- -D warnings || true
+        cargo clippy --package goldbull-embedding -- -D warnings || true
+        cargo clippy --package goldbull-multimodel -- -D warnings || true
 
   audit:
     name: Security Audit

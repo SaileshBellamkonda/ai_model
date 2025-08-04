@@ -41,12 +41,22 @@ jobs:
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
         cargo build --release --target ${{ matrix.target }} --package goldbull-text || echo "goldbull-text build failed"
         cargo build --release --target ${{ matrix.target }} --package goldbull-code || echo "goldbull-code build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-brief || echo "goldbull-brief build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-vision || echo "goldbull-vision build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding build failed"
+        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel build failed"
 
     - name: Run tests
       run: |
         cargo test --target ${{ matrix.target }} --package goldbull-core
         cargo test --target ${{ matrix.target }} --package goldbull-tokenizer
         cargo test --target ${{ matrix.target }} --package goldbull-text || echo "goldbull-text tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-brief || echo "goldbull-brief tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-vision || echo "goldbull-vision tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel tests failed"
 
     - name: Upload nightly artifacts
       uses: actions/upload-artifact@v4
