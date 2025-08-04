@@ -185,7 +185,6 @@ async fn main() -> Result<()> {
     // Check device availability
     let device = Device::Cpu;
     info!("Using CPU for inference");
-    }
     
     match &cli.command {
         Commands::Complete { 
@@ -818,5 +817,4 @@ fn load_context_files(files: &str) -> Result<Vec<goldbull_code::completion::Cont
     }
     
     Ok(context_files)
-}
 }
