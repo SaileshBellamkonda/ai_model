@@ -4,7 +4,7 @@ members = [
     "goldbull-core",
     "goldbull-tokenizer",
     "goldbull-text",
-    # "goldbull-code",  # excluded due to tree-sitter compilation issues, but [[bin]] sections added to Cargo.toml
+    "goldbull-code",
     "goldbull-sage",
     "goldbull-brief",
     "goldbull-vision",

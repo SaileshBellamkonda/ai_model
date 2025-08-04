@@ -166,7 +166,7 @@ pub struct GenerationResponse {
 }
 
 /// Code quality metrics
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct QualityMetrics {
     /// Syntactic correctness (0.0 - 1.0)
     pub syntax_score: f64,
@@ -246,7 +246,7 @@ pub enum ErrorSeverity {
 }
 
 /// Alternative code generation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct CodeAlternative {
     /// Alternative code
     pub code: String,
@@ -259,7 +259,7 @@ pub struct CodeAlternative {
 }
 
 /// Generation metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct GenerationMetadata {
     /// Time taken for generation (milliseconds)
     pub generation_time_ms: u64,
