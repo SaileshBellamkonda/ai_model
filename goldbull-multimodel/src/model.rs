@@ -71,7 +71,8 @@ pub struct GoldbullMultimodel {
     audio_output_proj: candle_nn::Linear,
     /// Tokenizer for text processing
     tokenizer: BpeTokenizer,
-    /// Variable map for weight management
+    /// Variable map for weight management (maintained for model structure)
+    #[allow(dead_code)]
     var_map: VarMap,
 }
 
@@ -118,6 +119,7 @@ pub struct AudioModalityEncoder {
 }
 
 /// Cross-modal fusion mechanism
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct CrossModalFusion {
     text_to_vision_attention: CrossModalAttention,
@@ -364,15 +366,15 @@ impl GoldbullMultimodel {
     /// Generate image output description from fused representation
     async fn generate_image_output(&self, fused_repr: &Tensor) -> Result<Vec<u8>> {
         let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
-        let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
+        let _vision_logits = self.vision_output_proj.forward(&decoder_output)?;
         
         // Production-grade image generation with latent space sampling and proper decoding
         let decoder_output = self.multimodal_decoder.forward(fused_repr)?;
-        let vision_logits = self.vision_output_proj.forward(&decoder_output)?;
+        let _vision_logits = self.vision_output_proj.forward(&decoder_output)?;
         
         // Convert logits to sophisticated image generation parameters using VAE-style approach
-        let batch_size = vision_logits.dim(0)?;
-        let seq_len = vision_logits.dim(1)?;
+        let _batch_size = vision_logits.dim(0)?;
+        let _seq_len = vision_logits.dim(1)?;
         let feature_dim = vision_logits.dim(2)?;
         
         // Split logits into mean and log variance for proper latent sampling
@@ -475,8 +477,8 @@ impl GoldbullMultimodel {
         let activated = upsampled.gelu()?;
         
         // Step 3: Spatial feature reshaping (simulate 2D structure)
-        let batch_size = activated.dim(0)?;
-        let seq_len = activated.dim(1)?;
+        let _batch_size = activated.dim(0)?;
+        let _seq_len = activated.dim(1)?;
         let features = activated.dim(2)?;
         
         // Reshape to spatial format if possible
@@ -955,7 +957,7 @@ impl CrossModalFusion {
             };
             
             // Apply type weighting
-            let weighted_energy = attention_energy.mul(&Tensor::from_slice(
+            let _weighted_energy = attention_energy.mul(&Tensor::from_slice(
                 &[type_weight], (), modality.device()
             )?)?;
             
@@ -966,7 +968,7 @@ impl CrossModalFusion {
         // Step 2: Compute cross-modal attention weights
         let stacked_weights = Tensor::stack(&attention_weights, 0)?;
         let normalized_weights = candle_nn::ops::softmax(&stacked_weights, 0)?;
-        let weight_vec: Vec<f32> = normalized_weights.to_vec1()?;
+        let _weight_vec: Vec<f32> = normalized_weights.to_vec1()?;
         
         // Step 3: Apply attention weights and fuse
         let mut fused_representation = weighted_modalities[0].mul(&Tensor::from_slice(
@@ -974,7 +976,7 @@ impl CrossModalFusion {
         )?)?;
         
         for (i, modality) in weighted_modalities.iter().enumerate().skip(1) {
-            let weighted_modality = modality.mul(&Tensor::from_slice(
+            let _weighted_modality = modality.mul(&Tensor::from_slice(
                 &[weight_vec[i]], (), modality.device()
             )?)?;
             fused_representation = fused_representation.add(&weighted_modality)?;
@@ -1045,7 +1047,7 @@ impl TransformerLayer {
 
 impl MultiHeadAttention {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        let num_heads = config.num_attention_heads;
+        let _num_heads = config.num_attention_heads;
         let head_dim = config.hidden_size / num_heads;
         
         let query_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("query"))?;
@@ -1057,8 +1059,8 @@ impl MultiHeadAttention {
     }
     
     fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
-        let batch_size = query.dim(0)?;
-        let seq_len = query.dim(1)?;
+        let _batch_size = query.dim(0)?;
+        let _seq_len = query.dim(1)?;
         
         let q = self.query_proj.forward(query)?;
         let k = self.key_proj.forward(key)?;
@@ -1077,7 +1079,7 @@ impl MultiHeadAttention {
 
 impl CrossModalAttention {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
-        let num_heads = config.num_attention_heads;
+        let _num_heads = config.num_attention_heads;
         
         let query_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("query"))?;
         let key_proj = linear(config.hidden_size, config.hidden_size, var_builder.pp("key"))?;
@@ -1089,8 +1091,8 @@ impl CrossModalAttention {
     
     /// Forward pass for cross-modal attention
     fn forward(&self, query: &Tensor, key: &Tensor, value: &Tensor) -> Result<Tensor> {
-        let batch_size = query.dim(0)?;
-        let seq_len = query.dim(1)?;
+        let _batch_size = query.dim(0)?;
+        let _seq_len = query.dim(1)?;
         let head_dim = query.dim(2)? / self.num_heads;
         
         // Reshape for multi-head attention
@@ -1169,7 +1171,7 @@ impl MelSpectrogramProcessor {
     fn new(config: &ModelConfig, var_builder: VarBuilder) -> Result<Self> {
         let hidden_size = config.hidden_size;
         let num_mel_bins = 128; // Standard mel-spectrogram bins
-        let num_heads = 8; // Multi-head attention for temporal and spectral analysis
+        let _num_heads = 8; // Multi-head attention for temporal and spectral analysis
         
         // Multi-scale temporal convolution layers for different time resolutions
         let mut temporal_conv_layers = Vec::new();
@@ -1289,7 +1291,7 @@ impl MelSpectrogramProcessor {
         let mut combined_mel = mel_features[0].clone();
         for (i, feature) in mel_features.iter().enumerate().skip(1) {
             // Progressive weighted combination simulating mel-scale emphasis
-            let weight = 0.8_f32.powi(i as i32);
+            let _weight = 0.8_f32.powi(i as i32);
             combined_mel = combined_mel.add(feature)?;
         }
         combined_mel = self.norm_layers[0].forward(&combined_mel)?;
@@ -1332,11 +1334,11 @@ impl MelSpectrogramProcessor {
         let frequency_enhanced = self.frequency_domain_processor.forward(&spectral_x)?;
         
         // Apply sophisticated frequency domain transformations
-        let mut freq_processed = frequency_enhanced.clone();
+        let _freq_processed = frequency_enhanced.clone();
         
         // Simulate discrete cosine transform (DCT) patterns for spectral analysis
         // Simplified to avoid complex slice operations
-        let mut freq_processed = frequency_enhanced.clone();
+        let _freq_processed = frequency_enhanced.clone();
         freq_processed = self.norm_layers[3].forward(&freq_processed)?;
         
         // Stage 5: Temporal attention for long-range dependencies (simplified)

@@ -109,7 +109,7 @@ impl Clone for GoldbullCode {
                 match self.copy_weights_to_model(&mut new_model) {
                     Ok(_) => {
                         // Validate that the weight copying was successful
-                        if new_model.validate_weight_consistency(&self).unwrap_or(0.0) > 0.95 {
+                        if new_model.validate_weight_consistency(self).unwrap_or(0.0) > 0.95 {
                             tracing::info!("Model cloned successfully with copied weights");
                             new_model
                         } else {
@@ -163,6 +163,7 @@ enum TopologyType {
     Custom,          // Complex custom topology
 }
 
+#[allow(dead_code)]
 impl GoldbullCode {
     /// Production-grade weight copying between models
     /// 
@@ -211,7 +212,7 @@ impl GoldbullCode {
                 Ok(copied_tensor) => {
                     // Validate the copied tensor
                     if !self.validate_tensor_copy(source_tensor, &copied_tensor)? {
-                        copy_errors.push(format!("Validation failed for tensor '{}'", name));
+                        copy_errors.push(format!("Validation failed for tensor '{name}'"));
                         continue;
                     }
                     
@@ -223,7 +224,7 @@ impl GoldbullCode {
                                    name, source_tensor.dims());
                 }
                 Err(e) => {
-                    copy_errors.push(format!("Failed to copy tensor '{}': {}", name, e));
+                    copy_errors.push(format!("Failed to copy tensor '{name}': {e}"));
                 }
             }
         }
@@ -373,7 +374,7 @@ impl GoldbullCode {
                 let target_tensor: &Tensor = target_var;
                 
                 // Calculate similarity score for this tensor pair
-                if let Ok(similarity) = self.calculate_tensor_similarity(&source_tensor, &target_tensor) {
+                if let Ok(similarity) = self.calculate_tensor_similarity(source_tensor, target_tensor) {
                     total_similarity += similarity;
                     compared_tensors += 1;
                 }
@@ -395,7 +396,7 @@ impl GoldbullCode {
         
         // Sample comparison for large tensors
         let elem_count = tensor1.elem_count();
-        let sample_size = (elem_count / 100).max(100).min(1000);
+        let sample_size = (elem_count / 100).clamp(100, 1000);
         
         let mut correlation_sum = 0.0f32;
         let mut magnitude_ratio_sum = 0.0f32;
@@ -433,7 +434,7 @@ impl GoldbullCode {
         // Combine metrics (weighted average)
         let similarity = 0.7 * avg_magnitude_similarity + 0.3 * correlation_sum.abs().sqrt();
         
-        Ok(similarity.min(1.0).max(0.0))
+        Ok(similarity.clamp(0.0, 1.0))
     }
 
     /// Validate that two models have consistent architecture
@@ -508,14 +509,14 @@ impl GoldbullCode {
         let self_tensors = {
             let data = self.var_map.data().lock().unwrap();
             data.iter()
-                .map(|(name, var)| (name.clone(), (&**var).dims().to_vec()))
+                .map(|(name, var)| (name.clone(), var.dims().to_vec()))
                 .collect::<HashMap<String, Vec<usize>>>()
         };
         
         let other_tensors = {
             let data = other.var_map.data().lock().unwrap();
             data.iter()
-                .map(|(name, var)| (name.clone(), (&**var).dims().to_vec()))
+                .map(|(name, var)| (name.clone(), var.dims().to_vec()))
                 .collect::<HashMap<String, Vec<usize>>>()
         };
         
@@ -557,11 +558,11 @@ impl GoldbullCode {
         
         // 2. Validate transformer layer shapes
         for layer_idx in 0..self.config.num_layers {
-            let layer_prefix = format!("transformer_blocks.{}", layer_idx);
+            let layer_prefix = format!("transformer_blocks.{layer_idx}");
             
             // Query, Key, Value projection shapes: [hidden_size, hidden_size]
             for proj in &["query", "key", "value"] {
-                let tensor_name = format!("{}.attention.{}.weight", layer_prefix, proj);
+                let tensor_name = format!("{layer_prefix}.attention.{proj}.weight");
                 if let Some(proj_shape) = self_tensors.get(&tensor_name) {
                     let expected_shape = vec![self.config.hidden_size, self.config.hidden_size];
                     if proj_shape != &expected_shape {
@@ -573,7 +574,7 @@ impl GoldbullCode {
             }
             
             // Attention output projection: [hidden_size, hidden_size]
-            let attn_out_name = format!("{}.attention.output.weight", layer_prefix);
+            let attn_out_name = format!("{layer_prefix}.attention.output.weight");
             if let Some(attn_out_shape) = self_tensors.get(&attn_out_name) {
                 let expected_shape = vec![self.config.hidden_size, self.config.hidden_size];
                 if attn_out_shape != &expected_shape {
@@ -587,7 +588,7 @@ impl GoldbullCode {
             let ff_size = self.config.hidden_size * 4;
             
             // First FF layer: [hidden_size, ff_size]
-            let ff1_name = format!("{}.feed_forward.linear1.weight", layer_prefix);
+            let ff1_name = format!("{layer_prefix}.feed_forward.linear1.weight");
             if let Some(ff1_shape) = self_tensors.get(&ff1_name) {
                 let expected_shape = vec![ff_size, self.config.hidden_size]; // Note: transposed for linear layer
                 if ff1_shape != &expected_shape {
@@ -598,7 +599,7 @@ impl GoldbullCode {
             }
             
             // Second FF layer: [ff_size, hidden_size]
-            let ff2_name = format!("{}.feed_forward.linear2.weight", layer_prefix);
+            let ff2_name = format!("{layer_prefix}.feed_forward.linear2.weight");
             if let Some(ff2_shape) = self_tensors.get(&ff2_name) {
                 let expected_shape = vec![self.config.hidden_size, ff_size]; // Note: transposed for linear layer
                 if ff2_shape != &expected_shape {
@@ -610,7 +611,7 @@ impl GoldbullCode {
             
             // Layer norm shapes: [hidden_size]
             for ln_type in &["input_norm", "post_attention_norm"] {
-                let ln_name = format!("{}.{}.weight", layer_prefix, ln_type);
+                let ln_name = format!("{layer_prefix}.{ln_type}.weight");
                 if let Some(ln_shape) = self_tensors.get(&ln_name) {
                     let expected_shape = vec![self.config.hidden_size];
                     if ln_shape != &expected_shape {
@@ -1086,7 +1087,7 @@ impl GoldbullCode {
         // Create a new model with the same configuration
         Self::new(self.config.clone(), self.device.clone())
             .unwrap_or_else(|e| {
-                panic!("Critical error: Cannot create fallback clone: {}", e);
+                panic!("Critical error: Cannot create fallback clone: {e}");
             })
     }
     
@@ -2433,6 +2434,7 @@ impl P2PTopology {
 
 /// Results of GPU connectivity pattern analysis
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct ConnectivityAnalysis {
     /// Number of detected connectivity domains (e.g., NUMA nodes, NVLink islands)
     num_domains: usize,
@@ -2477,6 +2479,7 @@ pub struct CodeAttention {
     /// Head dimension size
     head_dim: usize,
     /// Attention dropout rate
+    #[allow(dead_code)]
     dropout_rate: f64,
 }
 
@@ -2489,8 +2492,10 @@ pub struct CodeFeedForward {
     /// Second linear transformation (contraction)
     linear2: candle_nn::Linear,
     /// Intermediate size for expansion
+    #[allow(dead_code)]
     intermediate_size: usize,
     /// Dropout rate for regularization
+    #[allow(dead_code)]
     dropout_rate: f64,
 }
 
@@ -2567,7 +2572,7 @@ impl GoldbullCode {
                 config.num_attention_heads,
                 config.intermediate_size,
                 0.1, // dropout rate
-                var_builder.pp(&format!("transformer.{}", i))
+                var_builder.pp(format!("transformer.{i}"))
             )?;
             transformer_blocks.push(block);
         }
