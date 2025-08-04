@@ -140,7 +140,7 @@ impl Model {
         }
         
         let max_batch_size = free_memory / memory_per_sample;
-        std::cmp::max(1, std::cmp::min(max_batch_size, 32)) // Cap at 32 for safety
+        max_batch_size.clamp(1, 32) // Cap at 32 for safety
     }
     
     /// Calculate current CPU utilization optimizations
