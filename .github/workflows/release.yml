@@ -58,19 +58,26 @@ jobs:
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
 
-    - name: Build additional libraries
-      run: |
-        cargo build --release --target ${{ matrix.target }} --package goldbull-brief
-        cargo build --release --target ${{ matrix.target }} --package goldbull-vision
-        cargo build --release --target ${{ matrix.target }} --package goldbull-sage
-        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
-        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
-        cargo build --release --target ${{ matrix.target }} --package goldbull-code
-      continue-on-error: true
+    - name: Build goldbull-brief
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-brief
+
+    - name: Build goldbull-vision
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-vision
+
+    - name: Build goldbull-sage
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-sage
+
+    - name: Build goldbull-embedding
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
+
+    - name: Build goldbull-multimodel
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
+
+    - name: Build goldbull-code
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
 
     - name: Build goldbull-text binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
-      continue-on-error: true
 
     - name: Create release directory
       shell: bash
