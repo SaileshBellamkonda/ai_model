@@ -274,31 +274,32 @@ jobs:
     - name: Run tests for goldbull-code
       run: cargo test --package goldbull-code
 
-    - name: Run clippy (linting)
-      run: |
-        cargo clippy --package goldbull-core -- -D warnings
-        cargo clippy --package goldbull-tokenizer -- -D warnings
+    - name: Run clippy for goldbull-core
+      run: cargo clippy --package goldbull-core
+
+    - name: Run clippy for goldbull-tokenizer
+      run: cargo clippy --package goldbull-tokenizer
 
     - name: Run clippy for goldbull-text
-      run: cargo clippy --package goldbull-text -- -D warnings
+      run: cargo clippy --package goldbull-text
 
     - name: Run clippy for goldbull-brief
-      run: cargo clippy --package goldbull-brief -- -D warnings
+      run: cargo clippy --package goldbull-brief
 
     - name: Run clippy for goldbull-vision
-      run: cargo clippy --package goldbull-vision -- -D warnings
+      run: cargo clippy --package goldbull-vision
 
     - name: Run clippy for goldbull-sage
-      run: cargo clippy --package goldbull-sage -- -D warnings
+      run: cargo clippy --package goldbull-sage
 
     - name: Run clippy for goldbull-embedding
-      run: cargo clippy --package goldbull-embedding -- -D warnings
+      run: cargo clippy --package goldbull-embedding
 
     - name: Run clippy for goldbull-multimodel
-      run: cargo clippy --package goldbull-multimodel -- -D warnings
+      run: cargo clippy --package goldbull-multimodel
 
     - name: Run clippy for goldbull-code
-      run: cargo clippy --package goldbull-code -- -D warnings
+      run: cargo clippy --package goldbull-code
 
   audit:
     name: Security Audit

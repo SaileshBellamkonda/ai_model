@@ -1,11 +1,11 @@
 use anyhow::Result;
-use candle_core::{Device, Tensor, IndexOp, Module};
-use goldbull_tokenizer::{BpeTokenizer, Tokenizer};
+use candle_core::{Tensor, IndexOp};
+use goldbull_tokenizer::Tokenizer;
 use rand::Rng;
-use std::collections::VecDeque;
+use serde::{Deserialize, Serialize};
+use crate::syntax::LanguageType;
 use crate::model::GoldbullCode;
 use crate::completion::{CompletionRequest, CompletionResponse, CompletionEngine};
-use crate::syntax::{LanguageType, SyntaxAnalyzer, CodeFeatures};
 
 /// Advanced code generation engine
 /// Combines transformer-based generation with syntax awareness and code intelligence
@@ -77,7 +77,7 @@ pub struct GenerationRequest {
 }
 
 /// Additional context for code generation
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GenerationContext {
     /// File name or identifier
     pub file_name: Option<String>,
@@ -183,7 +183,7 @@ pub struct QualityMetrics {
 }
 
 /// Syntax validation results
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxValidation {
     /// Whether code is syntactically valid
     pub is_valid: bool,
@@ -196,7 +196,7 @@ pub struct SyntaxValidation {
 }
 
 /// Syntax error information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxError {
     /// Error message
     pub message: String,
@@ -211,7 +211,7 @@ pub struct SyntaxError {
 }
 
 /// Syntax warning information
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxWarning {
     /// Warning message
     pub message: String,
@@ -224,7 +224,7 @@ pub struct SyntaxWarning {
 }
 
 /// Suggested syntax fix
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SyntaxFix {
     /// Description of the fix
     pub description: String,
@@ -237,7 +237,7 @@ pub struct SyntaxFix {
 }
 
 /// Error severity levels
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ErrorSeverity {
     Error,
     Warning,
@@ -439,9 +439,9 @@ impl<'a> CodeGenerator<'a> {
     ) -> Result<Vec<u32>> {
         let mut generated_tokens = Vec::new();
         let mut current_input = input_tensor.clone();
-        let mut generation_time = std::time::Instant::now();
+        let generation_time = std::time::Instant::now();
         
-        for step in 0..config.max_tokens {
+        for _step in 0..config.max_tokens {
             // Check timeout
             if generation_time.elapsed().as_secs() > config.max_generation_time {
                 tracing::warn!("Generation timed out after {} seconds", config.max_generation_time);
@@ -511,7 +511,7 @@ impl<'a> CodeGenerator<'a> {
         }
         
         let vocab_size = logits.dim(0)?;
-        let k = k.min(vocab_size);
+        let _k = k.min(vocab_size);
         
         // For now, return logits as-is since topk is not available
         // In a real implementation, we'd implement proper top-k filtering
@@ -558,7 +558,7 @@ impl<'a> CodeGenerator<'a> {
             self.model.tokenizer().token_to_id("</s>"),
         ];
         
-        eos_tokens.iter().any(|&eos| eos == Some(token))
+        eos_tokens.contains(&Some(token))
     }
     
     /// Check if token represents end of statement (language-specific)
@@ -596,14 +596,14 @@ impl<'a> CodeGenerator<'a> {
         match language {
             LanguageType::Rust => {
                 if code.trim_start().starts_with("fn ") {
-                    Ok(format!("/// TODO: Add function documentation\n{}", code))
+                    Ok(format!("/// TODO: Add function documentation\n{code}"))
                 } else {
                     Ok(code.to_string())
                 }
             }
             LanguageType::Python => {
                 if code.trim_start().starts_with("def ") {
-                    Ok(format!("{}    \"\"\"TODO: Add function documentation\"\"\"\n", code))
+                    Ok(format!("{code}    \"\"\"TODO: Add function documentation\"\"\"\n"))
                 } else {
                     Ok(code.to_string())
                 }
@@ -633,8 +633,8 @@ impl<'a> CodeGenerator<'a> {
                         alternatives.push(CodeAlternative {
                             code: alt_response.code,
                             confidence: alt_response.confidence,
-                            description: format!("{} generation", desc),
-                            rationale: format!("Generated with temperature {}", temp),
+                            description: format!("{desc} generation"),
+                            rationale: format!("Generated with temperature {temp}"),
                         });
                     }
                 }
@@ -695,7 +695,7 @@ impl QualityValidator {
         })
     }
     
-    fn validate_syntax(&self, code: &str, language: LanguageType) -> Result<SyntaxValidation> {
+    fn validate_syntax(&self, _code: &str, _language: LanguageType) -> Result<SyntaxValidation> {
         // Simplified syntax validation
         // In practice, would use language-specific parsers
         Ok(SyntaxValidation {
@@ -706,7 +706,7 @@ impl QualityValidator {
         })
     }
     
-    fn check_syntax_score(&self, code: &str, language: LanguageType) -> Result<f64> {
+    fn check_syntax_score(&self, code: &str, _language: LanguageType) -> Result<f64> {
         // Simple heuristic - check for balanced brackets
         let open_braces = code.matches('{').count();
         let close_braces = code.matches('}').count();
@@ -750,7 +750,7 @@ impl SyntaxPostProcessor {
         })
     }
     
-    fn format_code(&self, code: &str, language: LanguageType, style: &StylePreferences) -> Result<String> {
+    fn format_code(&self, code: &str, _language: LanguageType, style: &StylePreferences) -> Result<String> {
         // Simple formatting - in practice would use language-specific formatters
         let mut formatted = code.to_string();
         
@@ -762,7 +762,7 @@ impl SyntaxPostProcessor {
         Ok(formatted)
     }
     
-    fn auto_complete(&self, code: &str, language: LanguageType) -> Result<String> {
+    fn auto_complete(&self, code: &str, _language: LanguageType) -> Result<String> {
         let mut completed = code.to_string();
         
         // Simple auto-completion for missing brackets

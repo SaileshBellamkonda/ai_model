@@ -25,13 +25,13 @@ impl Default for TrainingConfig {
 
 /// Vision model trainer
 pub struct Trainer {
-    config: TrainingConfig,
+    _config: TrainingConfig,
 }
 
 impl Trainer {
     /// Create a new trainer
     pub fn new(config: TrainingConfig) -> Self {
-        Self { config }
+        Self { _config: config }
     }
     
     /// Train the model (placeholder)

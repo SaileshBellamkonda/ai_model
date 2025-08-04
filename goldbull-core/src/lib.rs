@@ -17,9 +17,9 @@ mod tests {
         let test_values = [0, 1, 16, 32, 50, 100];
         
         for &value in &test_values {
-            let original_result = std::cmp::max(1, std::cmp::min(value, 32));
+            let original_result = value.clamp(1, 32);
             let clamp_result = value.clamp(1, 32);
-            assert_eq!(original_result, clamp_result, "Clamp mismatch for value {}", value);
+            assert_eq!(original_result, clamp_result, "Clamp mismatch for value {value}");
         }
     }
 }

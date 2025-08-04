@@ -2,6 +2,7 @@
 use anyhow::Result;
 
 /// Multimodel trainer
+#[derive(Default)]
 pub struct Trainer {}
 
 impl Trainer {

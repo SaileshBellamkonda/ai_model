@@ -126,7 +126,7 @@ pub enum CompletionMode {
 }
 
 /// Hints to guide code completion
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CompletionHints {
     /// Expected return type if known
     pub expected_type: Option<String>,
@@ -142,18 +142,7 @@ pub struct CompletionHints {
     pub style_preferences: StylePreferences,
 }
 
-impl Default for CompletionHints {
-    fn default() -> Self {
-        Self {
-            expected_type: None,
-            scope_variables: Vec::new(),
-            scope_functions: Vec::new(),
-            current_context: CodeContext::default(),
-            project_patterns: Vec::new(),
-            style_preferences: StylePreferences::default(),
-        }
-    }
-}
+
 
 /// Variable available in current scope
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -607,7 +596,7 @@ impl CompletionEngine {
     }
     
     /// Extract scope information
-    fn extract_scope_info(&self, prefix: &str) -> Result<ScopeInfo> {
+    fn extract_scope_info(&self, _prefix: &str) -> Result<ScopeInfo> {
         // Simplified scope extraction
         // In practice, would use proper syntax tree analysis
         Ok(ScopeInfo {
@@ -643,14 +632,14 @@ impl CompletionEngine {
     }
     
     /// Check if function pattern matches current context
-    fn pattern_matches_context(&self, pattern: &FunctionPattern, context: &AnalyzedContext) -> bool {
+    fn pattern_matches_context(&self, _pattern: &FunctionPattern, _context: &AnalyzedContext) -> bool {
         // Simplified pattern matching
         // In practice, would have sophisticated matching logic
         true
     }
     
     /// Check if type pattern matches current context
-    fn type_pattern_matches_context(&self, pattern: &TypePattern, context: &AnalyzedContext) -> bool {
+    fn type_pattern_matches_context(&self, _pattern: &TypePattern, _context: &AnalyzedContext) -> bool {
         // Simplified pattern matching
         true
     }
@@ -685,7 +674,7 @@ impl CompletionEngine {
         &self,
         pattern: &CompletionPattern,
         request: &CompletionRequest,
-        context: &AnalyzedContext
+        _context: &AnalyzedContext
     ) -> Result<Option<CompletionCandidate>> {
         match pattern {
             CompletionPattern::Function(func_pattern) => {
@@ -713,7 +702,7 @@ impl CompletionEngine {
     fn generate_context_candidates(
         &self,
         request: &CompletionRequest,
-        context: &AnalyzedContext
+        _context: &AnalyzedContext
     ) -> Result<Vec<CompletionCandidate>> {
         let mut candidates = Vec::new();
         
@@ -744,7 +733,7 @@ impl CompletionEngine {
     fn generate_template_candidates(
         &self,
         request: &CompletionRequest,
-        context: &AnalyzedContext
+        _context: &AnalyzedContext
     ) -> Result<Vec<CompletionCandidate>> {
         let mut candidates = Vec::new();
         
@@ -776,7 +765,7 @@ impl CompletionEngine {
     fn rank_completions(
         &self,
         mut candidates: Vec<CompletionCandidate>,
-        request: &CompletionRequest
+        _request: &CompletionRequest
     ) -> Result<(CompletionCandidate, Vec<CompletionAlternative>)> {
         // Sort by confidence score
         candidates.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
@@ -806,7 +795,7 @@ impl CompletionEngine {
     }
     
     /// Check code quality
-    fn check_quality(&self, completion: &CompletionCandidate, request: &CompletionRequest) -> Result<QualityMetrics> {
+    fn check_quality(&self, _completion: &CompletionCandidate, _request: &CompletionRequest) -> Result<QualityMetrics> {
         Ok(QualityMetrics {
             style_consistency: 0.8,
             naming_quality: 0.7,
@@ -820,9 +809,9 @@ impl CompletionEngine {
     /// Generate improvement suggestions
     fn generate_suggestions(
         &self,
-        completion: &CompletionCandidate,
+        _completion: &CompletionCandidate,
         quality: &QualityMetrics,
-        request: &CompletionRequest
+        _request: &CompletionRequest
     ) -> Result<Vec<String>> {
         let mut suggestions = Vec::new();
         
@@ -907,8 +896,8 @@ impl PatternDatabase {
     fn new() -> Self {
         let mut function_patterns = HashMap::new();
         let mut type_patterns = HashMap::new();
-        let mut idiom_patterns = HashMap::new();
-        let mut error_patterns = HashMap::new();
+        let idiom_patterns = HashMap::new();
+        let error_patterns = HashMap::new();
         
         // Initialize with common patterns
         Self::init_rust_patterns(&mut function_patterns, &mut type_patterns);
@@ -924,7 +913,7 @@ impl PatternDatabase {
     
     fn init_rust_patterns(
         function_patterns: &mut HashMap<LanguageType, Vec<FunctionPattern>>,
-        type_patterns: &mut HashMap<LanguageType, Vec<TypePattern>>
+        _type_patterns: &mut HashMap<LanguageType, Vec<TypePattern>>
     ) {
         let rust_functions = vec![
             FunctionPattern {
@@ -948,7 +937,7 @@ impl PatternDatabase {
     
     fn init_python_patterns(
         function_patterns: &mut HashMap<LanguageType, Vec<FunctionPattern>>,
-        type_patterns: &mut HashMap<LanguageType, Vec<TypePattern>>
+        _type_patterns: &mut HashMap<LanguageType, Vec<TypePattern>>
     ) {
         let python_functions = vec![
             FunctionPattern {
@@ -972,7 +961,7 @@ impl TemplateEngine {
         }
     }
     
-    fn render(&self, template: &str, hints: &CompletionHints) -> Result<String> {
+    fn render(&self, template: &str, _hints: &CompletionHints) -> Result<String> {
         // Simple template rendering - in practice would use a proper template engine
         let mut result = template.to_string();
         
