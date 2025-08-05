@@ -8,11 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Goldbull Brief - Text Summarization AI Model"
 
-# Define binary targets
-[[bin]]
-name = "goldbull-brief"
-path = "src/main.rs"
-
+# Define binary targets - keep only training
 [[bin]]
 name = "goldbull-brief-train"
 path = "src/train.rs"

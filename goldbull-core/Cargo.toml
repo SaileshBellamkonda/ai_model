@@ -8,6 +8,11 @@ repository.workspace = true
 homepage.workspace = true
 description = "Core components for goldbull AI model suite"
 
+# Define binary targets
+[[bin]]
+name = "goldbull-onnx-converter"
+path = "src/onnx_converter.rs"
+
 [dependencies]
 anyhow.workspace = true
 thiserror.workspace = true
@@ -15,12 +20,15 @@ serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
 tracing.workspace = true
+tracing-subscriber.workspace = true
+clap.workspace = true
 candle-core.workspace = true
 candle-nn.workspace = true
 ndarray.workspace = true
 safetensors.workspace = true
 rayon.workspace = true
 num_cpus.workspace = true
+chrono.workspace = true
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

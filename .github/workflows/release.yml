@@ -76,8 +76,8 @@ jobs:
     - name: Build goldbull-code
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
 
-    - name: Build goldbull-text binary
-      run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
+    - name: Build goldbull-onnx-converter
+      run: cargo build --release --target ${{ matrix.target }} --bin goldbull-onnx-converter
 
     - name: Create release directory
       shell: bash
@@ -88,48 +88,30 @@ jobs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text" release/${{ matrix.artifact_name }}/
-        fi
+        # Copy training binaries if they exist
         if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text-train" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-code" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code-train" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-sage" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage-train" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-brief" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-brief" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-brief-train" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-vision" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-vision" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-vision-train" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-multimodel" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-multimodel-train" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-embedding" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-embedding-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-onnx-converter" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-onnx-converter" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist
@@ -148,48 +130,30 @@ jobs:
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text.exe" release/${{ matrix.artifact_name }}/
-        fi
+        # Copy training binaries if they exist
         if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-code.exe" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code-train.exe" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-sage.exe" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage-train.exe" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-brief.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-brief.exe" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-brief-train.exe" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-vision.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-vision.exe" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-vision-train.exe" release/${{ matrix.artifact_name }}/
-        fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-multimodel.exe" release/${{ matrix.artifact_name }}/
         fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" release/${{ matrix.artifact_name }}/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-embedding.exe" release/${{ matrix.artifact_name }}/
-        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-onnx-converter.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-onnx-converter.exe" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist

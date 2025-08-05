@@ -46,13 +46,14 @@ jobs:
       run: |
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
-        cargo build --release --target ${{ matrix.target }} --package goldbull-text || echo "goldbull-text build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-code || echo "goldbull-code build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-brief || echo "goldbull-brief build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-vision || echo "goldbull-vision build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding build failed"
-        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-text-train || echo "goldbull-text-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-code-train || echo "goldbull-code-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-brief-train || echo "goldbull-brief-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-vision-train || echo "goldbull-vision-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-sage-train || echo "goldbull-sage-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-embedding-train || echo "goldbull-embedding-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-multimodel-train || echo "goldbull-multimodel-train build failed"
+        cargo build --release --target ${{ matrix.target }} --bin goldbull-onnx-converter || echo "goldbull-onnx-converter build failed"
 
     - name: Run tests
       run: |
@@ -64,6 +65,7 @@ jobs:
         cargo test --target ${{ matrix.target }} --package goldbull-sage || echo "goldbull-sage tests failed"
         cargo test --target ${{ matrix.target }} --package goldbull-embedding || echo "goldbull-embedding tests failed"
         cargo test --target ${{ matrix.target }} --package goldbull-multimodel || echo "goldbull-multimodel tests failed"
+        cargo test --target ${{ matrix.target }} --package goldbull-code || echo "goldbull-code tests failed"
 
     - name: Prepare nightly artifacts
       shell: bash
@@ -74,30 +76,36 @@ jobs:
       if: runner.os != 'Windows'
       shell: bash
       run: |
-        # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text" nightly-artifacts/
+        # Copy training binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train" nightly-artifacts/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-code" nightly-artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train" nightly-artifacts/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-sage" nightly-artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-onnx-converter" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-onnx-converter" nightly-artifacts/
         fi
         
     - name: Copy binaries (Windows)
       if: runner.os == 'Windows'
       shell: bash
       run: |
-        # Copy binaries if they exist
-        if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-text.exe" nightly-artifacts/
+        # Copy training binaries if they exist
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" nightly-artifacts/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-code.exe" nightly-artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train.exe" nightly-artifacts/
         fi
-        if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
-          cp "target/${{ matrix.target }}/release/goldbull-sage.exe" nightly-artifacts/
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train.exe" nightly-artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-onnx-converter.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-onnx-converter.exe" nightly-artifacts/
         fi
 
     - name: Upload nightly artifacts

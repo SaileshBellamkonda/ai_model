@@ -8,11 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Code completion model for goldbull AI suite"
 
-# Define binary targets
-[[bin]]
-name = "goldbull-code"
-path = "src/main.rs"
-
+# Define binary targets - keep only training
 [[bin]]
 name = "goldbull-code-train"
 path = "src/train.rs"

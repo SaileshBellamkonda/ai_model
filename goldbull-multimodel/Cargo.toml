@@ -8,11 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Goldbull Multimodel - Multimodal AI Model"
 
-# Define binary targets
-[[bin]]
-name = "goldbull-multimodel"
-path = "src/main.rs"
-
+# Define binary targets - keep only training
 [[bin]]
 name = "goldbull-multimodel-train"
 path = "src/train.rs"
