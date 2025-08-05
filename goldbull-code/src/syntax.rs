@@ -295,7 +295,6 @@ impl SyntaxAnalyzer {
     /// * `Result<Self>` - Initialized analyzer or error
     pub fn new(_language: LanguageType) -> Result<Self> {
         let _parser = Parser::new();
-        
         // Temporarily disable tree-sitter functionality due to version conflicts
         // TODO: Fix tree-sitter version compatibility 
         Err(anyhow::anyhow!("Tree-sitter functionality temporarily disabled"))

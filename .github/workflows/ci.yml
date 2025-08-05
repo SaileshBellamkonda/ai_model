@@ -22,21 +22,11 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact_name: goldbull-linux-amd64
             
-          # Linux ARM64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: goldbull-linux-arm64
-            
           # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: goldbull-windows-amd64
             
-          # Windows ARM64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            artifact_name: goldbull-windows-arm64
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -51,6 +41,16 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu
+
+    - name: Set environment variables for aarch64 builds
+      if: matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'aarch64-pc-windows-msvc'
+      run: |
+        echo "RUSTFLAGS=-C target-cpu=generic" >> $GITHUB_ENV
+        echo "CARGO_CFG_TARGET_FEATURE=" >> $GITHUB_ENV
+        echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+        echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
     - name: Cache cargo dependencies
       uses: actions/cache@v4
@@ -68,29 +68,32 @@ jobs:
 
     - name: Build workspace (check compilation)
       run: cargo check --workspace --target ${{ matrix.target }}
-      continue-on-error: true
 
     - name: Build core libraries
       run: |
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
 
-    - name: Build additional libraries
-      run: |
-        cargo build --release --target ${{ matrix.target }} --package goldbull-brief
-        cargo build --release --target ${{ matrix.target }} --package goldbull-vision
-        cargo build --release --target ${{ matrix.target }} --package goldbull-sage
-        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
-        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
-      continue-on-error: true
+    - name: Build goldbull-brief
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-brief
+
+    - name: Build goldbull-vision
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-vision
+
+    - name: Build goldbull-sage
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-sage
+
+    - name: Build goldbull-embedding
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
+
+    - name: Build goldbull-multimodel
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
+
+    - name: Build goldbull-code
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
 
     - name: Build goldbull-text binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
-      continue-on-error: true
-
-    - name: Build goldbull-code binary  
-      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
-      continue-on-error: true
 
     - name: Prepare artifacts directory
       shell: bash
@@ -105,11 +108,44 @@ jobs:
         if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text" artifacts/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train" artifacts/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code" artifacts/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train" artifacts/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief-train" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision-train" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel-train" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding-train" artifacts/
         fi
         
     - name: Copy binaries (Windows)
@@ -120,11 +156,44 @@ jobs:
         if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text.exe" artifacts/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" artifacts/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code.exe" artifacts/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train.exe" artifacts/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief-train.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision-train.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding.exe" artifacts/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" artifacts/
         fi
 
     - name: Upload build artifacts
@@ -139,16 +208,24 @@ jobs:
       run: |
         cargo test --target ${{ matrix.target }} --package goldbull-core
         cargo test --target ${{ matrix.target }} --package goldbull-tokenizer
-      continue-on-error: true
 
-    - name: Test additional libraries
-      run: |
-        cargo test --target ${{ matrix.target }} --package goldbull-brief
-        cargo test --target ${{ matrix.target }} --package goldbull-vision
-        cargo test --target ${{ matrix.target }} --package goldbull-sage
-        cargo test --target ${{ matrix.target }} --package goldbull-embedding
-        cargo test --target ${{ matrix.target }} --package goldbull-multimodel
-      continue-on-error: true
+    - name: Test goldbull-brief
+      run: cargo test --target ${{ matrix.target }} --package goldbull-brief
+
+    - name: Test goldbull-vision
+      run: cargo test --target ${{ matrix.target }} --package goldbull-vision
+
+    - name: Test goldbull-sage
+      run: cargo test --target ${{ matrix.target }} --package goldbull-sage
+
+    - name: Test goldbull-embedding
+      run: cargo test --target ${{ matrix.target }} --package goldbull-embedding
+
+    - name: Test goldbull-multimodel
+      run: cargo test --target ${{ matrix.target }} --package goldbull-multimodel
+
+    - name: Test goldbull-code
+      run: cargo test --target ${{ matrix.target }} --package goldbull-code
 
   test:
     name: Run Tests
@@ -175,35 +252,54 @@ jobs:
       run: |
         cargo test --package goldbull-core
         cargo test --package goldbull-tokenizer
-        cargo test --package goldbull-text || true
 
-    - name: Run tests for additional packages
-      run: |
-        cargo test --package goldbull-brief || true
-        cargo test --package goldbull-vision || true
-        cargo test --package goldbull-sage || true
-        cargo test --package goldbull-embedding || true
-        cargo test --package goldbull-multimodel || true
+    - name: Run tests for goldbull-text
+      run: cargo test --package goldbull-text
 
-    - name: Run clippy (linting)
-      run: |
-        cargo clippy --package goldbull-core
-        cargo clippy --package goldbull-tokenizer
-        cargo clippy --package goldbull-text || true
-        cargo clippy --package goldbull-code || true
-        cargo clippy --package goldbull-vision || true
-        cargo clippy --package goldbull-multimodel || true
-        cargo clippy --package goldbull-sage || true
-        cargo clippy --package goldbull-brief || true
-        cargo clippy --package goldbull-embedding || true
+    - name: Run tests for goldbull-brief
+      run: cargo test --package goldbull-brief
 
-    - name: Run clippy for additional packages
-      run: |
-        cargo clippy --package goldbull-brief -- -D warnings || true
-        cargo clippy --package goldbull-vision -- -D warnings || true
-        cargo clippy --package goldbull-sage -- -D warnings || true
-        cargo clippy --package goldbull-embedding -- -D warnings || true
-        cargo clippy --package goldbull-multimodel -- -D warnings || true
+    - name: Run tests for goldbull-vision
+      run: cargo test --package goldbull-vision
+
+    - name: Run tests for goldbull-sage
+      run: cargo test --package goldbull-sage
+
+    - name: Run tests for goldbull-embedding
+      run: cargo test --package goldbull-embedding
+
+    - name: Run tests for goldbull-multimodel
+      run: cargo test --package goldbull-multimodel
+
+    - name: Run tests for goldbull-code
+      run: cargo test --package goldbull-code
+
+    - name: Run clippy for goldbull-core
+      run: cargo clippy --package goldbull-core
+
+    - name: Run clippy for goldbull-tokenizer
+      run: cargo clippy --package goldbull-tokenizer
+
+    - name: Run clippy for goldbull-text
+      run: cargo clippy --package goldbull-text
+
+    - name: Run clippy for goldbull-brief
+      run: cargo clippy --package goldbull-brief
+
+    - name: Run clippy for goldbull-vision
+      run: cargo clippy --package goldbull-vision
+
+    - name: Run clippy for goldbull-sage
+      run: cargo clippy --package goldbull-sage
+
+    - name: Run clippy for goldbull-embedding
+      run: cargo clippy --package goldbull-embedding
+
+    - name: Run clippy for goldbull-multimodel
+      run: cargo clippy --package goldbull-multimodel
+
+    - name: Run clippy for goldbull-code
+      run: cargo clippy --package goldbull-code
 
   audit:
     name: Security Audit

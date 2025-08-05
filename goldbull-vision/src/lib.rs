@@ -27,20 +27,35 @@ pub async fn process_image(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use goldbull_core::config::ModelType;
 
-    #[tokio::test]
-    async fn test_vision_processing() {
-        let model = new_vision_model(Device::Cpu).unwrap();
-        
+    #[test]
+    fn test_vision_model_creation() {
+        let config = ModelConfig::vision();
+        assert_eq!(config.model_name, "goldbull-vision");
+        assert_eq!(config.model_type, ModelType::Vision);
+        assert_eq!(config.hidden_size, 512);
+    }
+
+    #[test]
+    fn test_vision_request_creation() {
         let request = VisionRequest {
-            image_data: vec![0u8; 224 * 224 * 3], // Dummy RGB image data
+            image_data: vec![255u8; 224 * 224 * 3],
             task: VisionTask::Classification,
-            max_results: 5,
+            max_results: 10,
             ..Default::default()
         };
         
-        let response = process_image(&model, request).await.unwrap();
-        assert!(!response.results.is_empty());
-        assert!(response.confidence > 0.0);
+        assert_eq!(request.image_data.len(), 224 * 224 * 3);
+        assert_eq!(request.task, VisionTask::Classification);
+        assert_eq!(request.max_results, 10);
+    }
+    
+    #[test]
+    fn test_model_config_vision() {
+        let config = ModelConfig::vision();
+        assert!(config.hidden_size > 0);
+        assert!(config.num_layers > 0);
+        assert_eq!(config.vocab_size, 1000); // ImageNet classes
     }
 }

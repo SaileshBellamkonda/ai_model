@@ -8,6 +8,15 @@ repository.workspace = true
 homepage.workspace = true
 description = "Goldbull Sage - Question Answering AI Model"
 
+# Define binary targets
+[[bin]]
+name = "goldbull-sage"
+path = "src/main.rs"
+
+[[bin]]
+name = "goldbull-sage-train"
+path = "src/train.rs"
+
 [dependencies]
 # Core dependencies
 goldbull-core = { path = "../goldbull-core" }

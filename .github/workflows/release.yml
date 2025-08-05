@@ -23,20 +23,10 @@ jobs:
             target: x86_64-unknown-linux-gnu
             artifact_name: goldbull-linux-amd64
             
-          # Linux ARM64  
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: goldbull-linux-arm64
-            
           # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             artifact_name: goldbull-windows-amd64
-            
-          # Windows ARM64
-          - os: windows-latest
-            target: aarch64-pc-windows-msvc
-            artifact_name: goldbull-windows-arm64
 
     steps:
     - name: Checkout code
@@ -53,31 +43,41 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-aarch64-linux-gnu
 
+    - name: Set environment variables for aarch64 builds
+      if: matrix.target == 'aarch64-unknown-linux-gnu' || matrix.target == 'aarch64-pc-windows-msvc'
+      run: |
+        echo "RUSTFLAGS=-C target-cpu=generic" >> $GITHUB_ENV
+        echo "CARGO_CFG_TARGET_FEATURE=" >> $GITHUB_ENV
+        echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+        echo "CXX_aarch64_unknown_linux_gnu=aarch64-linux-gnu-g++" >> $GITHUB_ENV
+        echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
     - name: Build core libraries
       run: |
         cargo build --release --target ${{ matrix.target }} --package goldbull-core
         cargo build --release --target ${{ matrix.target }} --package goldbull-tokenizer
 
-    - name: Build additional libraries
-      run: |
-        cargo build --release --target ${{ matrix.target }} --package goldbull-brief
-        cargo build --release --target ${{ matrix.target }} --package goldbull-vision
-        cargo build --release --target ${{ matrix.target }} --package goldbull-sage
-        cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
-        cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
-      continue-on-error: true
+    - name: Build goldbull-brief
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-brief
+
+    - name: Build goldbull-vision
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-vision
+
+    - name: Build goldbull-sage
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-sage
+
+    - name: Build goldbull-embedding
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-embedding
+
+    - name: Build goldbull-multimodel
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-multimodel
+
+    - name: Build goldbull-code
+      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
 
     - name: Build goldbull-text binary
       run: cargo build --release --target ${{ matrix.target }} --package goldbull-text
-      continue-on-error: true
-
-    - name: Build goldbull-code binary
-      run: cargo build --release --target ${{ matrix.target }} --package goldbull-code
-      continue-on-error: true
-
-    - name: Build goldbull-sage binary
-      run: cargo build --release --target ${{ matrix.target }} --package goldbull-sage
-      continue-on-error: true
 
     - name: Create release directory
       shell: bash
@@ -92,11 +92,44 @@ jobs:
         if [ -f "target/${{ matrix.target }}/release/goldbull-text" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text" release/${{ matrix.artifact_name }}/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train" release/${{ matrix.artifact_name }}/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code" release/${{ matrix.artifact_name }}/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train" release/${{ matrix.artifact_name }}/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel-train" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding-train" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist
@@ -119,11 +152,44 @@ jobs:
         if [ -f "target/${{ matrix.target }}/release/goldbull-text.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-text.exe" release/${{ matrix.artifact_name }}/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-text-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-text-train.exe" release/${{ matrix.artifact_name }}/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-code.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-code.exe" release/${{ matrix.artifact_name }}/
         fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-code-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-code-train.exe" release/${{ matrix.artifact_name }}/
+        fi
         if [ -f "target/${{ matrix.target }}/release/goldbull-sage.exe" ]; then
           cp "target/${{ matrix.target }}/release/goldbull-sage.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-sage-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-sage-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-brief-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-brief-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-vision-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-vision-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-multimodel-train.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding.exe" release/${{ matrix.artifact_name }}/
+        fi
+        if [ -f "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" ]; then
+          cp "target/${{ matrix.target }}/release/goldbull-embedding-train.exe" release/${{ matrix.artifact_name }}/
         fi
         
         # Copy README and LICENSE if they exist

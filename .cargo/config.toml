@@ -2,9 +2,13 @@
 
 [target.aarch64-unknown-linux-gnu]
 linker = "aarch64-linux-gnu-gcc"
+# Use generic target-cpu to avoid advanced SIMD features that may not be available
+rustflags = ["-C", "target-cpu=generic"]
 
 [target.aarch64-pc-windows-msvc]
 # Windows ARM64 cross-compilation works out of the box on Windows
+# Use generic target-cpu to avoid advanced SIMD features that may not be available
+rustflags = ["-C", "target-cpu=generic"]
 
 [profile.release]
 # Optimize for small binary size and performance

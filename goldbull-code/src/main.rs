@@ -119,7 +119,7 @@ enum Commands {
     
     /// Analyze code syntax and features
     Analyze {
-        /// Code file to analyze
+        /// File to analyze
         #[arg(short, long)]
         file: String,
         
@@ -128,17 +128,17 @@ enum Commands {
         language: Option<String>,
         
         /// Show detailed analysis
-        #[arg(long)]
+        #[arg(short, long)]
         detailed: bool,
         
-        /// Output analysis to file
+        /// Output file path
         #[arg(short, long)]
         output: Option<String>,
     },
     
     /// Interactive code completion session
     Interactive {
-        /// Programming language for session
+        /// Programming language
         #[arg(short, long, default_value = "auto")]
         language: String,
         
@@ -150,22 +150,22 @@ enum Commands {
     /// Benchmark model performance
     Benchmark {
         /// Number of completion requests
-        #[arg(long, default_value = "100")]
+        #[arg(short, long, default_value = "100")]
         requests: usize,
         
         /// Benchmark dataset file
-        #[arg(long)]
+        #[arg(short, long)]
         dataset: Option<String>,
         
-        /// Save benchmark results
-        #[arg(long)]
+        /// Save results to file
+        #[arg(short, long)]
         save_results: Option<String>,
     },
     
     /// Show model information
     Info {
-        /// Show detailed model architecture
-        #[arg(long)]
+        /// Show detailed information
+        #[arg(short, long)]
         detailed: bool,
     },
 }
@@ -186,68 +186,66 @@ async fn main() -> Result<()> {
     let device = Device::Cpu;
     info!("Using CPU for inference");
     
-    if let Some(max_memory) = cli.max_memory {
-        info!("Memory limit requested: {} MB", max_memory);
-    }
-    
-    // Initialize device
-    let device = match cli.device.as_str() {
-        "cpu" => Device::Cpu,
-        "gpu" => {
-            if candle_core::utils::cuda_is_available() {
-                Device::new_cuda(0)?
-            } else {
-                info!("GPU requested but CUDA not available, falling back to CPU");
-                Device::Cpu
-            }
-        }
-        _ => {
-            error!("Invalid device: {}. Use 'cpu' or 'gpu'", cli.device);
-            std::process::exit(1);
-        }
-    };
-    
-    info!("Using device: {:?}", device);
-    
-    // Load model
-    let model = load_model(&cli, device).await?;
-    info!("Model loaded successfully");
-    
-    // Execute command
-    match cli.command {
+    match &cli.command {
         Commands::Complete { 
-            prefix, suffix, language, max_tokens, temperature, top_p, top_k, 
-            include_docs, context_files 
+            prefix, suffix, language, max_tokens, temperature, top_p, top_k, include_docs, context_files 
         } => {
+            let model = load_model(&cli, device).await?;
             complete_code(
-                &model, prefix, suffix, language, max_tokens, temperature, 
-                top_p, top_k, include_docs, context_files, &cli.format
+                &model,
+                prefix.clone(),
+                suffix.clone(),
+                language.clone(),
+                *max_tokens,
+                *temperature,
+                *top_p,
+                *top_k,
+                *include_docs,
+                context_files.clone(),
+                &cli.format,
             ).await?;
         }
         
         Commands::Generate { 
             prompt, language, mode, max_tokens, temperature, include_docs, output 
         } => {
+            let model = load_model(&cli, device).await?;
             generate_code(
-                &model, prompt, language, mode, max_tokens, temperature, 
-                include_docs, output, &cli.format
+                &model,
+                prompt.clone(),
+                language.clone(),
+                mode.clone(),
+                *max_tokens,
+                *temperature,
+                *include_docs,
+                output.clone(),
+                &cli.format,
             ).await?;
         }
         
         Commands::Analyze { file, language, detailed, output } => {
-            analyze_code(file, language, detailed, output, &cli.format).await?;
+            analyze_code(
+                file.clone(),
+                language.clone(),
+                *detailed,
+                output.clone(),
+                &cli.format,
+            ).await?;
         }
         
         Commands::Interactive { language, syntax_highlighting } => {
-            interactive_session(&model, language, syntax_highlighting).await?;
+            let model = load_model(&cli, device).await?;
+            interactive_session(&model, language.clone(), *syntax_highlighting).await?;
         }
         
         Commands::Benchmark { requests, dataset, save_results } => {
-            benchmark_model(&model, requests, dataset, save_results).await?;
+            let model = load_model(&cli, device).await?;
+            benchmark_model(&model, *requests, dataset.clone(), save_results.clone()).await?;
         }
         
         Commands::Info { detailed } => {
-            show_model_info(&model, detailed, &cli.format)?;
+            let model = load_model(&cli, device).await?;
+            show_model_info(&model, *detailed, &cli.format)?;
         }
     }
     
