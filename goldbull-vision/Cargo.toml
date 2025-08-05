@@ -8,11 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Goldbull Vision - Computer Vision AI Model"
 
-# Define binary targets
-[[bin]]
-name = "goldbull-vision"
-path = "src/main.rs"
-
+# Define binary targets - keep only training
 [[bin]]
 name = "goldbull-vision-train"
 path = "src/train.rs"

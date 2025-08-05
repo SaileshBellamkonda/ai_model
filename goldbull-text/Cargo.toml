@@ -8,11 +8,7 @@ repository.workspace = true
 homepage.workspace = true
 description = "Text generation model for goldbull AI suite"
 
-# Define binary targets
-[[bin]]
-name = "goldbull-text"
-path = "src/main.rs"
-
+# Define binary targets - keep only training
 [[bin]]
 name = "goldbull-text-train"
 path = "src/train.rs"
